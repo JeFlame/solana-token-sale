@@ -118,7 +118,10 @@ impl Processor {
             &[&seller_account_info.key],
         )?;
 
-        msg!("chage tempToken's Authroity : seller -> token_program");
+        msg!(
+            "chage tempToken's Authroity : seller -> token_program {:?}",
+            set_authority_ix
+        );
         invoke(
             &set_authority_ix,
             &[
@@ -127,7 +130,7 @@ impl Processor {
                 seller_account_info.clone(),
             ],
         )?;
-
+        msg!("chage tempToken's Authroity : seller -> token_program DONE!");
         return Ok(());
     }
 
@@ -211,7 +214,7 @@ impl Processor {
     }
 
     //seller_account_info
-    //seller_token_account_info - For receive remain token 
+    //seller_token_account_info - For receive remain token
     //temp_token_account_info - For retrieve remain token
     //token_program - For transfer the token
     //pda - For signing when send the token from temp token account and close temp token account

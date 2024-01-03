@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "compile": "tsc -p ./tsconfig.json",
-    "setup-validator": "solana-test-validator -r --bpf-program 4yBTZXsuz7c1X3PJF4PPCJr8G6HnNAgRvzAWVoFZMncH",
-    "setup" : "npm run compile && node build/setup.js",
+    "setup-validator": "solana-test-validator -r --bpf-program 6uVMMaKnFo26KkS32PqJYTv7r3zWXS4BomSQxa1D1WxJ",
+    "setup": "npm run compile && node build/setup.js",
     "start": "npm run compile && node build/setup.js && node build/startTokenSale.js",
+    "start:only": "npm run compile && node build/startTokenSale.js",
     "buy": "npm run compile && node build/buyToken.js",
     "close": "npm run compile && node build/closeTokenSale.js",
     "all": "npm run compile && node build/setup.js && node build/startTokenSale.js && node build/buyToken.js && node build/closeTokenSale.js"

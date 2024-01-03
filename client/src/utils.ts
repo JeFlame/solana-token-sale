@@ -1,5 +1,8 @@
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { TokenSaleAccountLayoutInterface, ExpectedTokenSaleAccountLayoutInterface } from "./account";
+import {
+  TokenSaleAccountLayoutInterface,
+  ExpectedTokenSaleAccountLayoutInterface,
+} from "./account";
 import BN = require("bn.js");
 import fs = require("fs");
 
@@ -17,7 +20,9 @@ const envItems = [
 
 export function updateEnv() {
   const eol = "\n";
-  const envContents = envItems.map((item) => `${item}=${process.env[item]}`).join(eol);
+  const envContents = envItems
+    .map((item) => `${item}=${process.env[item]}`)
+    .join(eol);
   fs.writeFileSync(".env", envContents);
 }
 
@@ -27,11 +32,20 @@ export const getKeypair = (publicKey: string, privateKey: Uint8Array) =>
     secretKey: privateKey,
   });
 
-export const getTokenBalance = async (pubkey: PublicKey, connection: Connection) => {
-  return parseInt((await connection.getTokenAccountBalance(pubkey)).value.amount);
+export const getTokenBalance = async (
+  pubkey: PublicKey,
+  connection: Connection
+) => {
+  return parseInt(
+    (await connection.getTokenAccountBalance(pubkey)).value.amount
+  );
 };
 
-export const createAccountInfo = (pubkey: PublicKey, isSigner: boolean, isWritable: boolean) => {
+export const createAccountInfo = (
+  pubkey: PublicKey,
+  isSigner: boolean,
+  isWritable: boolean
+) => {
   return {
     pubkey: pubkey,
     isSigner: isSigner,
@@ -39,7 +53,10 @@ export const createAccountInfo = (pubkey: PublicKey, isSigner: boolean, isWritab
   };
 };
 
-export const checkAccountInitialized = async (connection: Connection, customAccountPubkey: PublicKey) => {
+export const checkAccountInitialized = async (
+  connection: Connection,
+  customAccountPubkey: PublicKey
+) => {
   const customAccount = await connection.getAccountInfo(customAccountPubkey);
 
   if (customAccount === null || customAccount.data.length === 0) {
@@ -67,7 +84,10 @@ export const checkAccountDataIsValid = (
         console.log(`${key} is not matched expected one`);
         process.exit(1);
       }
-    } else if (value instanceof Uint8Array && typeof expectedValue === "number") {
+    } else if (
+      value instanceof Uint8Array &&
+      typeof expectedValue === "number"
+    ) {
       //value is undefined
       if (!value) {
         console.log(`${key} flag has not been set`);
@@ -75,10 +95,15 @@ export const checkAccountDataIsValid = (
       }
 
       //value is not matched expected one.
-      const isBufferSame = Buffer.compare(value, Buffer.from(new BN(expectedValue).toArray("le", value.length)));
+      const isBufferSame = Buffer.compare(
+        value,
+        Buffer.from(new BN(expectedValue).toArray("le", value.length))
+      );
 
       if (isBufferSame !== 0) {
-        console.log(`[${key}] : expected value is ${expectedValue}, but current value is ${value}`);
+        console.log(
+          `[${key}] : expected value is ${expectedValue}, but current value is ${value}`
+        );
         process.exit(1);
       }
     }

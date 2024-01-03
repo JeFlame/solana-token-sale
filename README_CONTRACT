@@ -1,0 +1,4 @@
+1. solana config set --url devnet
+2. cargo build-bpf
+6. solana program deploy target/sbf-solana-solana/release/solana_bpf_boilerplate.so
+7. npm run start
