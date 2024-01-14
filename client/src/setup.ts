@@ -25,7 +25,7 @@ const setup = async () => {
   const sellerKeypair = Keypair.fromSecretKey(
     base58.decode(process.env.SELLER_PRIVATE_KEY!)
   );
-  // const buyerPubkey = new PublicKey(process.env.BUYER_PUBLIC_KEY!);
+  const buyerPubkey = new PublicKey(process.env.BUYER_PUBLIC_KEY!);
 
   console.log("Create Token Mint Account...\n");
   const token = await Token.createMint(
@@ -48,6 +48,13 @@ const setup = async () => {
     sellerKeypair,
     [],
     50000000 * 10 ** 8
+  );
+
+  await token.burn(
+    sellerTokenAccount.address,
+    sellerKeypair,
+    [],
+    10000000 * 10 ** 8
   );
 
   const sellerTokenBalance = await connection.getTokenAccountBalance(

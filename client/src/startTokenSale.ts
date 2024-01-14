@@ -51,7 +51,7 @@ const transaction = async () => {
   );
 
   const instruction: InstructionNumber = 0;
-  const amountOfTokenWantToSale = 1000;
+  const amountOfTokenWantToSale = 10000000;
   const swapSolAmount = 1;
   const swapTokenAmount = 2;
 
@@ -120,6 +120,7 @@ const transaction = async () => {
     tokenSaleProgramAccountKeypair: String(
       tokenSaleProgramAccountKeypair.publicKey
     ),
+    initTokenSaleProgramIx,
   });
 
   //make transaction with several instructions(ix)
