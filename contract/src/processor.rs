@@ -1,8 +1,8 @@
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     msg,
-    native_token::LAMPORTS_PER_SOL,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_pack::Pack,
@@ -25,20 +25,22 @@ impl Processor {
 
         match instruction {
             TokenSaleInstruction::InitTokenSale {
-                swap_sol_amount,
-                swap_token_amount,
+                price,
+                start_time,
+                end_time,
             } => {
                 msg!("Instruction: init token sale program");
                 Self::init_token_sale_program(
                     accounts,
-                    swap_sol_amount,
-                    swap_token_amount,
+                    price,
+                    start_time,
+                    end_time,
                     token_program_id,
                 )
             }
-            TokenSaleInstruction::BuyToken {} => {
+            TokenSaleInstruction::BuyToken { sol_amount } => {
                 msg!("Instruction: buy token");
-                Self::buy_token(accounts, token_program_id)
+                Self::buy_token(accounts, sol_amount, token_program_id)
             }
 
             TokenSaleInstruction::EndTokenSale {} => {
@@ -56,8 +58,9 @@ impl Processor {
 
     fn init_token_sale_program(
         account_info_list: &[AccountInfo],
-        swap_sol_amount: u64,
-        swap_token_amount: u64,
+        price: u64,
+        start_time: u64,
+        end_time: u64,
         token_sale_program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut account_info_list.iter();
@@ -96,8 +99,9 @@ impl Processor {
             true,
             *seller_account_info.key,
             *temp_token_account_info.key,
-            swap_sol_amount,
-            swap_token_amount,
+            price,
+            start_time,
+            end_time,
         );
 
         TokenSaleProgramData::pack(
@@ -118,10 +122,6 @@ impl Processor {
             &[&seller_account_info.key],
         )?;
 
-        msg!(
-            "chage tempToken's Authroity : seller -> token_program {:?}",
-            set_authority_ix
-        );
         invoke(
             &set_authority_ix,
             &[
@@ -143,7 +143,11 @@ impl Processor {
     //token program - For transfer the token
     //pda - For signing when send the token from temp token account
 
-    fn buy_token(accounts: &[AccountInfo], token_sale_program_id: &Pubkey) -> ProgramResult {
+    fn buy_token(
+        accounts: &[AccountInfo],
+        sol_amount: u64,
+        token_sale_program_id: &Pubkey,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let buyer_account_info = next_account_info(account_info_iter)?;
         if !buyer_account_info.is_signer {
@@ -152,10 +156,28 @@ impl Processor {
 
         let seller_account_info = next_account_info(account_info_iter)?;
         let temp_token_account_info = next_account_info(account_info_iter)?;
-
         let token_sale_program_account_info = next_account_info(account_info_iter)?;
         let token_sale_program_account_data =
             TokenSaleProgramData::unpack(&token_sale_program_account_info.try_borrow_data()?)?;
+
+        // Getting clock directly
+        let clock = Clock::get()?;
+        // Getting timestamp
+        let current_timestamp = clock.unix_timestamp as u64;
+        msg!(
+            "Current Timestamp: {} , start_time: {}, end_time: {}",
+            current_timestamp,
+            token_sale_program_account_data.start_time,
+            token_sale_program_account_data.end_time
+        );
+
+        if current_timestamp < token_sale_program_account_data.start_time
+            || current_timestamp > token_sale_program_account_data.end_time
+        {
+            return Err(ProgramError::BorshIoError(
+                "Invalid time range!".to_string(),
+            ));
+        }
 
         if *seller_account_info.key != token_sale_program_account_data.seller_pubkey {
             return Err(ProgramError::InvalidAccountData);
@@ -166,11 +188,14 @@ impl Processor {
             return Err(ProgramError::InvalidAccountData);
         }
 
-        msg!("transfer SOL : buy account -> seller account");
+        msg!(
+            "Transfer {} SOL : buy account -> seller account",
+            sol_amount
+        );
         let transfer_sol_to_seller = system_instruction::transfer(
             buyer_account_info.key,
             seller_account_info.key,
-            token_sale_program_account_data.swap_sol_amount * LAMPORTS_PER_SOL,
+            sol_amount,
         );
 
         let system_program = next_account_info(account_info_iter)?;
@@ -183,7 +208,11 @@ impl Processor {
             ],
         )?;
 
-        msg!("transfer Token : temp token account -> buyer token account");
+        let swap_receive_token_amount = sol_amount * token_sale_program_account_data.price;
+        msg!(
+            "Transfer {} Token : temp token account -> buyer token account",
+            swap_receive_token_amount
+        );
         let buyer_token_account_info = next_account_info(account_info_iter)?;
         let token_program = next_account_info(account_info_iter)?;
         let (pda, bump_seed) =
@@ -195,7 +224,7 @@ impl Processor {
             buyer_token_account_info.key,
             &pda,
             &[&pda],
-            token_sale_program_account_data.swap_token_amount,
+            swap_receive_token_amount,
         )?;
 
         let pda = next_account_info(account_info_iter)?;
