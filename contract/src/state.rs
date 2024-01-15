@@ -43,7 +43,7 @@ impl IsInitialized for TokenSaleProgramData {
 }
 
 impl Pack for TokenSaleProgramData {
-    const LEN: usize = 89; // 1 + 32 + 32 + 8 + 8
+    const LEN: usize = 89; // 1 + 32 + 32 + 8 + 8 + 8
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, TokenSaleProgramData::LEN];
         let (is_initialized, seller_pubkey, temp_token_account_pubkey, price, start_time, end_time) =

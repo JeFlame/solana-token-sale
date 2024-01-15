@@ -33,7 +33,7 @@ const setup = async () => {
     sellerKeypair,
     sellerKeypair.publicKey,
     null,
-    8,
+    9,
     TOKEN_PROGRAM_ID
   );
 

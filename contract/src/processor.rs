@@ -1,5 +1,6 @@
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     msg,
     program::{invoke, invoke_signed},
@@ -159,6 +160,25 @@ impl Processor {
         let token_sale_program_account_data =
             TokenSaleProgramData::unpack(&token_sale_program_account_info.try_borrow_data()?)?;
 
+        // Getting clock directly
+        let clock = Clock::get()?;
+        // Getting timestamp
+        let current_timestamp = clock.unix_timestamp as u64;
+        msg!(
+            "Current Timestamp: {} , start_time: {}, end_time: {}",
+            current_timestamp,
+            token_sale_program_account_data.start_time,
+            token_sale_program_account_data.end_time
+        );
+
+        if current_timestamp < token_sale_program_account_data.start_time
+            || current_timestamp > token_sale_program_account_data.end_time
+        {
+            return Err(ProgramError::BorshIoError(
+                "Invalid time range!".to_string(),
+            ));
+        }
+
         if *seller_account_info.key != token_sale_program_account_data.seller_pubkey {
             return Err(ProgramError::InvalidAccountData);
         }
@@ -169,7 +189,7 @@ impl Processor {
         }
 
         msg!(
-            "transfer {} SOL : buy account -> seller account",
+            "Transfer {} SOL : buy account -> seller account",
             sol_amount
         );
         let transfer_sol_to_seller = system_instruction::transfer(
@@ -190,7 +210,7 @@ impl Processor {
 
         let swap_receive_token_amount = sol_amount * token_sale_program_account_data.price;
         msg!(
-            "transfer {} Token : temp token account -> buyer token account",
+            "Transfer {} Token : temp token account -> buyer token account",
             swap_receive_token_amount
         );
         let buyer_token_account_info = next_account_info(account_info_iter)?;

@@ -52,9 +52,10 @@ const transaction = async () => {
 
   const instruction: InstructionNumber = 0;
   const amountOfTokenWantToSale = 100000 * 10 ** 8;
-  const price = 10;
-  const startTime = new Date().getTime() - 1000000;
-  const endTime = new Date().getTime();
+  const price = 1500;
+  const nowTime = Number((new Date().getTime() / 1000).toFixed(0));
+  const startTime = nowTime;
+  const endTime = nowTime + 1000000;
 
   const tempTokenAccountKeypair = new Keypair();
   const createTempTokenAccountIx = SystemProgram.createAccount({
@@ -178,6 +179,9 @@ const transaction = async () => {
     decodedTokenSaleProgramAccountData,
     expectedTokenSaleProgramAccountData
   );
+
+  //////////// PHARSE 2 //////////////////////////////////
+  // UPDATE CONFIG
 
   console.table([
     {
