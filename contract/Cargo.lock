@@ -1173,17 +1173,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2593d31f82ead8df961d8bd23a64c2ccf2eb5dd34b0a34bfb4dd54011c72009e"
 
 [[package]]
-name = "solana-bpf-boilerplate"
-version = "0.1.0"
-dependencies = [
- "ahash 0.8.6",
- "arrayref",
- "solana-program",
- "spl-token",
- "thiserror",
-]
-
-[[package]]
 name = "solana-frozen-abi"
 version = "1.17.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1563,6 +1552,17 @@ name = "windows_x86_64_msvc"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
+
+[[package]]
+name = "wukong-token-ido"
+version = "0.1.0"
+dependencies = [
+ "ahash 0.8.6",
+ "arrayref",
+ "solana-program",
+ "spl-token",
+ "thiserror",
+]
 
 [[package]]
 name = "zerocopy"

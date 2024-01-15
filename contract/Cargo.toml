@@ -1,9 +1,8 @@
 [package]
-name = "solana-bpf-boilerplate"
+name = "wukong-token-ido"
 version = "0.1.0"
 edition = "2018"
-license = "WTFPL"
-publish = false
+
 
 [features]
 no-entrypoint = []
@@ -14,8 +13,6 @@ thiserror = "^1.0.56"
 spl-token = {version = "4.0", features = ["no-entrypoint"]}
 arrayref = "0.3.6"
 ahash = "=0.8.6"
-# solana-frozen-abi = "=1.17.7"
-# zeroize = "^1.6.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
