@@ -162,7 +162,6 @@ impl Processor {
 
         // Getting clock directly
         let clock = Clock::get()?;
-        // Getting timestamp
         let current_timestamp = clock.unix_timestamp as u64;
         msg!(
             "Current Timestamp: {} , start_time: {}, end_time: {}",
