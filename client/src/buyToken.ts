@@ -18,6 +18,7 @@ import {
   TokenSaleAccountLayout,
 } from "./account";
 import base58 = require("bs58");
+import BN = require("bn.js");
 
 type InstructionNumber = 0 | 1 | 2;
 
@@ -59,6 +60,8 @@ const transaction = async () => {
   const decodedTokenSaleProgramAccountData = TokenSaleAccountLayout.decode(
     encodedTokenSaleProgramAccountData
   ) as TokenSaleAccountLayoutInterface;
+
+  console.log(decodedTokenSaleProgramAccountData);
   const tokenSaleProgramAccountData = {
     isInitialized: decodedTokenSaleProgramAccountData.isInitialized,
     sellerPubkey: new PublicKey(
@@ -67,8 +70,9 @@ const transaction = async () => {
     tempTokenAccountPubkey: new PublicKey(
       decodedTokenSaleProgramAccountData.tempTokenAccountPubkey
     ),
-    swapSolAmount: decodedTokenSaleProgramAccountData.swapSolAmount,
-    swapTokenAmount: decodedTokenSaleProgramAccountData.swapTokenAmount,
+    price: decodedTokenSaleProgramAccountData.price,
+    startTime: decodedTokenSaleProgramAccountData.startTime,
+    endTime: decodedTokenSaleProgramAccountData.endTime,
   };
 
   const token = new Token(
@@ -102,7 +106,9 @@ const transaction = async () => {
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
       createAccountInfo(PDA[0], false, false),
     ],
-    data: Buffer.from(Uint8Array.of(instruction)),
+    data: Buffer.from(
+      Uint8Array.of(instruction, ...new BN(123000000).toArray("le", 8))
+    ),
   });
   const tx = new Transaction().add(buyTokenIx);
 

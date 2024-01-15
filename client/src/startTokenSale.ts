@@ -51,9 +51,10 @@ const transaction = async () => {
   );
 
   const instruction: InstructionNumber = 0;
-  const amountOfTokenWantToSale = 10000000;
-  const swapSolAmount = 1;
-  const swapTokenAmount = 2;
+  const amountOfTokenWantToSale = 100000 * 10 ** 8;
+  const price = 10;
+  const startTime = new Date().getTime() - 1000000;
+  const endTime = new Date().getTime();
 
   const tempTokenAccountKeypair = new Keypair();
   const createTempTokenAccountIx = SystemProgram.createAccount({
@@ -105,8 +106,9 @@ const transaction = async () => {
     data: Buffer.from(
       Uint8Array.of(
         instruction,
-        ...new BN(swapSolAmount).toArray("le", 8),
-        ...new BN(swapTokenAmount).toArray("le", 8)
+        ...new BN(price).toArray("le", 8),
+        ...new BN(startTime).toArray("le", 8),
+        ...new BN(endTime).toArray("le", 8)
       )
     ),
   });
@@ -162,10 +164,15 @@ const transaction = async () => {
       isInitialized: 1,
       sellerPubkey: sellerKeypair.publicKey,
       tempTokenAccountPubkey: tempTokenAccountKeypair.publicKey,
-      swapSolAmount: swapSolAmount,
-      swapTokenAmount: swapTokenAmount,
+      price: price,
+      startTime: startTime,
+      endTime: endTime,
     };
 
+  console.log({
+    decodedTokenSaleProgramAccountData,
+    expectedTokenSaleProgramAccountData,
+  });
   console.log("Current TokenSaleProgramAccountData");
   checkAccountDataIsValid(
     decodedTokenSaleProgramAccountData,
