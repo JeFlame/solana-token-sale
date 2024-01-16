@@ -78,12 +78,6 @@ export const checkAccountDataIsValid = (
     const value = customAccountData[key];
     const expectedValue = expectedCustomAccountState[key];
 
-    console.log({
-      key,
-      value,
-      expectedValue,
-    });
-
     //PublicKey
     if (value instanceof Uint8Array && expectedValue instanceof PublicKey) {
       if (!new PublicKey(value).equals(expectedValue)) {

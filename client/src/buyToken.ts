@@ -29,13 +29,7 @@ const transaction = async () => {
   const tokenSaleProgramId = new PublicKey(process.env.CUSTOM_PROGRAM_ID!);
   const sellerPubkey = new PublicKey(process.env.SELLER_PUBLIC_KEY!);
   const buyerPubkey = new PublicKey(process.env.BUYER_PUBLIC_KEY!);
-  // const buyerPrivateKey = Uint8Array.from(
-  //   JSON.parse(process.env.BUYER_PRIVATE_KEY!)
-  // );
-  // const buyerKeypair = new Keypair({
-  //   publicKey: buyerPubkey.toBytes(),
-  //   secretKey: buyerPrivateKey,
-  // });
+
   const buyerKeypair = Keypair.fromSecretKey(
     base58.decode(process.env.BUYER_PRIVATE_KEY!)
   );

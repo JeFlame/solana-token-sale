@@ -10,6 +10,7 @@ pub struct TokenSaleProgramData {
     pub is_initialized: bool,
     pub seller_pubkey: Pubkey,
     pub temp_token_account_pubkey: Pubkey,
+    pub total_sale_token_amount: u64,
     pub price: u64,
     pub start_time: u64,
     pub end_time: u64,
@@ -21,6 +22,7 @@ impl TokenSaleProgramData {
         is_initialized: bool,              // 1
         seller_pubkey: Pubkey,             // 32
         temp_token_account_pubkey: Pubkey, // 32
+        total_sale_token_amount: u64,
         price: u64,
         start_time: u64,
         end_time: u64,
@@ -28,6 +30,7 @@ impl TokenSaleProgramData {
         self.is_initialized = is_initialized;
         self.seller_pubkey = seller_pubkey;
         self.temp_token_account_pubkey = temp_token_account_pubkey;
+        self.total_sale_token_amount = total_sale_token_amount;
         self.price = price;
         self.start_time = start_time;
         self.end_time = end_time;
@@ -43,11 +46,18 @@ impl IsInitialized for TokenSaleProgramData {
 }
 
 impl Pack for TokenSaleProgramData {
-    const LEN: usize = 89; // 1 + 32 + 32 + 8 + 8 + 8
+    const LEN: usize = 1 + 2 * 32 + 4 * 8; // 1 + 32 + 32 + 8 + 8 + 8
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, TokenSaleProgramData::LEN];
-        let (is_initialized, seller_pubkey, temp_token_account_pubkey, price, start_time, end_time) =
-            array_refs![src, 1, 32, 32, 8, 8, 8];
+        let (
+            is_initialized,
+            seller_pubkey,
+            temp_token_account_pubkey,
+            total_sale_token_amount,
+            price,
+            start_time,
+            end_time,
+        ) = array_refs![src, 1, 32, 32, 8, 8, 8, 8];
 
         let is_initialized = match is_initialized {
             [0] => false,
@@ -59,6 +69,7 @@ impl Pack for TokenSaleProgramData {
             is_initialized,
             seller_pubkey: Pubkey::new_from_array(*seller_pubkey),
             temp_token_account_pubkey: Pubkey::new_from_array(*temp_token_account_pubkey),
+            total_sale_token_amount: u64::from_le_bytes(*total_sale_token_amount),
             price: u64::from_le_bytes(*price),
             start_time: u64::from_le_bytes(*start_time),
             end_time: u64::from_le_bytes(*end_time),
@@ -71,15 +82,17 @@ impl Pack for TokenSaleProgramData {
             is_initialized_dst,
             seller_pubkey_dst,
             temp_token_account_pubkey_dst,
+            total_sale_token_amount_dst,
             price_dst,
             start_time_dst,
             end_time_dst,
-        ) = mut_array_refs![dst, 1, 32, 32, 8, 8, 8];
+        ) = mut_array_refs![dst, 1, 32, 32, 8, 8, 8, 8];
 
         let TokenSaleProgramData {
             is_initialized,
             seller_pubkey,
             temp_token_account_pubkey,
+            total_sale_token_amount,
             price,
             start_time,
             end_time,
@@ -88,6 +101,7 @@ impl Pack for TokenSaleProgramData {
         is_initialized_dst[0] = *is_initialized as u8;
         seller_pubkey_dst.copy_from_slice(seller_pubkey.as_ref());
         temp_token_account_pubkey_dst.copy_from_slice(temp_token_account_pubkey.as_ref());
+        *total_sale_token_amount_dst = total_sale_token_amount.to_le_bytes();
         *price_dst = price.to_le_bytes();
         *start_time_dst = start_time.to_le_bytes();
         *end_time_dst = end_time.to_le_bytes();

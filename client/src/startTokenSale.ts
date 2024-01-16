@@ -12,6 +12,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import BN = require("bn.js");
+import * as borsh from "@project-serum/borsh";
 import {
   checkAccountInitialized,
   checkAccountDataIsValid,
@@ -30,6 +31,14 @@ import base58 = require("bs58");
 type InstructionNumber = 0 | 1 | 2;
 
 const transaction = async () => {
+  const configInstructionLayout = borsh.struct([
+    borsh.u8("variant"),
+    borsh.u64("total_sale_token_amount"),
+    borsh.u64("price"),
+    borsh.u64("start_time"),
+    borsh.u64("end_time"),
+  ]);
+
   //phase1 (setup Transaction & send Transaction)
   console.log("Setup Transaction");
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
@@ -51,11 +60,7 @@ const transaction = async () => {
   );
 
   const instruction: InstructionNumber = 0;
-  const amountOfTokenWantToSale = 100000 * 10 ** 8;
-  const price = 1500;
-  const nowTime = Number((new Date().getTime() / 1000).toFixed(0));
-  const startTime = nowTime;
-  const endTime = nowTime + 1000000;
+  const totalSaleTokenAmount = 150000 * 10 ** 8;
 
   const tempTokenAccountKeypair = new Keypair();
   const createTempTokenAccountIx = SystemProgram.createAccount({
@@ -81,7 +86,7 @@ const transaction = async () => {
     tempTokenAccountKeypair.publicKey,
     sellerKeypair.publicKey,
     [],
-    amountOfTokenWantToSale
+    totalSaleTokenAmount
   );
 
   const tokenSaleProgramAccountKeypair = new Keypair();
@@ -95,6 +100,23 @@ const transaction = async () => {
     programId: tokenSaleProgramId,
   });
 
+  let buffer = Buffer.alloc(1000);
+  const price = 1500;
+  const nowTime = Number((new Date().getTime() / 1000).toFixed(0));
+  const startTime = nowTime;
+  const endTime = nowTime + 1000000;
+  configInstructionLayout.encode(
+    {
+      variant: 0,
+      total_sale_token_amount: new BN(totalSaleTokenAmount),
+      price: new BN(price),
+      start_time: new BN(startTime),
+      end_time: new BN(endTime),
+    },
+    buffer
+  );
+
+  buffer = buffer.slice(0, configInstructionLayout.getSpan(buffer));
   const initTokenSaleProgramIx = new TransactionInstruction({
     programId: tokenSaleProgramId,
     keys: [
@@ -104,14 +126,7 @@ const transaction = async () => {
       createAccountInfo(SYSVAR_RENT_PUBKEY, false, false),
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
     ],
-    data: Buffer.from(
-      Uint8Array.of(
-        instruction,
-        ...new BN(price).toArray("le", 8),
-        ...new BN(startTime).toArray("le", 8),
-        ...new BN(endTime).toArray("le", 8)
-      )
-    ),
+    data: buffer,
   });
 
   console.log({
@@ -155,6 +170,7 @@ const transaction = async () => {
     tokenSaleProgramAccountKeypair.publicKey
   );
 
+  await getConfig(tokenSaleProgramAccountKeypair.publicKey, connection);
   const encodedTokenSaleProgramAccountData = tokenSaleProgramAccount.data;
   const decodedTokenSaleProgramAccountData = TokenSaleAccountLayout.decode(
     encodedTokenSaleProgramAccountData
@@ -165,23 +181,17 @@ const transaction = async () => {
       isInitialized: 1,
       sellerPubkey: sellerKeypair.publicKey,
       tempTokenAccountPubkey: tempTokenAccountKeypair.publicKey,
+      totalSaleTokenAmount: totalSaleTokenAmount,
       price: price,
       startTime: startTime,
       endTime: endTime,
     };
 
-  console.log({
-    decodedTokenSaleProgramAccountData,
-    expectedTokenSaleProgramAccountData,
-  });
-  console.log("Current TokenSaleProgramAccountData");
+  console.log("Current TokenSaleProgramAccountData:");
   checkAccountDataIsValid(
     decodedTokenSaleProgramAccountData,
     expectedTokenSaleProgramAccountData
   );
-
-  //////////// PHARSE 2 //////////////////////////////////
-  // UPDATE CONFIG
 
   console.table([
     {
@@ -198,5 +208,33 @@ const transaction = async () => {
     tempTokenAccountKeypair.publicKey.toString();
   updateEnv();
 };
+
+async function getConfig(signer: PublicKey, connection: Connection) {
+  const borshConfigSchema = borsh.struct([
+    borsh.bool("is_initialized"),
+    borsh.publicKey("seller_pubkey"),
+    borsh.publicKey("temp_token_account_pubkey"),
+    borsh.u64("total_sale_token_amount"),
+    borsh.u64("price"),
+    borsh.u64("start_time"),
+    borsh.u64("end_time"),
+  ]);
+
+  const customAccount = await connection.getAccountInfo(signer);
+  console.log({ customAccount });
+  if (customAccount) {
+    const data = borshConfigSchema.decode(
+      customAccount ? customAccount.data : null
+    );
+    console.log({
+      seller_pubkey: data["seller_pubkey"].toString(),
+      temp_token_account_pubkey: data["temp_token_account_pubkey"].toString(),
+      total_sale_token: data["total_sale_token_amount"].toString(),
+      price: data["price"].toString(),
+      start_time: data["start_time"].toString(),
+      end_time: data["end_time"].toString(),
+    });
+  }
+}
 
 transaction();

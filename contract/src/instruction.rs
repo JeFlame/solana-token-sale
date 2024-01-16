@@ -1,10 +1,9 @@
+use borsh::BorshDeserialize;
 use solana_program::program_error::ProgramError;
-use std::convert::TryInto;
-
-use crate::error::CustomError::InvalidInstruction;
 
 pub enum TokenSaleInstruction {
     InitTokenSale {
+        total_sale_token_amount: u64,
         price: u64,
         start_time: u64,
         end_time: u64,
@@ -15,36 +14,45 @@ pub enum TokenSaleInstruction {
     EndTokenSale {},
 }
 
-//function of enum
+#[derive(BorshDeserialize)]
+struct InitTokenSalePayload {
+    total_sale_token_amount: u64,
+    price: u64,
+    start_time: u64,
+    end_time: u64,
+}
+
+#[derive(BorshDeserialize)]
+struct BuyTokenPayload {
+    sol_amount: u64,
+}
+
 impl TokenSaleInstruction {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
-        //check instruction type
-        let (tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
+        // Split the first byte of data
+        let (&variant, rest) = input
+            .split_first()
+            .ok_or(ProgramError::InvalidInstructionData)?;
 
-        //unpack the rest data for each instruction
-        return match tag {
-            0 => Ok(Self::InitTokenSale {
-                price: Self::unpack_byte(rest, 0)?,
-                start_time: Self::unpack_byte(rest, 1)?,
-                end_time: Self::unpack_byte(rest, 2)?,
-            }),
-            1 => Ok(Self::BuyToken {
-                sol_amount: Self::unpack_byte(rest, 0)?,
-            }),
-            2 => Ok(Self::EndTokenSale {}),
-            _ => Err(InvalidInstruction.into()),
-        };
-    }
-    fn unpack_byte(input: &[u8], byte_index: usize) -> Result<u64, ProgramError> {
-        let start_bit = byte_index * 8;
-        let end_bit = start_bit + 8;
-
-        let data = input
-            .get(start_bit..end_bit)
-            .and_then(|slice| slice.try_into().ok())
-            .map(u64::from_le_bytes)
-            .ok_or(InvalidInstruction)?;
-
-        return Ok(data);
+        // Match the first byte and return the AddMovieReview struct
+        Ok(match variant {
+            0 => {
+                let payload = InitTokenSalePayload::try_from_slice(rest).unwrap();
+                Self::InitTokenSale {
+                    total_sale_token_amount: payload.total_sale_token_amount,
+                    price: payload.price,
+                    start_time: payload.start_time,
+                    end_time: payload.end_time,
+                }
+            }
+            1 => {
+                let payload = BuyTokenPayload::try_from_slice(rest).unwrap();
+                Self::BuyToken {
+                    sol_amount: payload.sol_amount,
+                }
+            }
+            2 => Self::EndTokenSale {},
+            _ => return Err(ProgramError::InvalidInstructionData),
+        })
     }
 }

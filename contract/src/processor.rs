@@ -25,6 +25,7 @@ impl Processor {
 
         match instruction {
             TokenSaleInstruction::InitTokenSale {
+                total_sale_token_amount,
                 price,
                 start_time,
                 end_time,
@@ -32,6 +33,7 @@ impl Processor {
                 msg!("Instruction: init token sale program");
                 Self::init_token_sale_program(
                     accounts,
+                    total_sale_token_amount,
                     price,
                     start_time,
                     end_time,
@@ -58,11 +60,19 @@ impl Processor {
 
     fn init_token_sale_program(
         account_info_list: &[AccountInfo],
+        total_sale_token_amount: u64,
         price: u64,
         start_time: u64,
         end_time: u64,
         token_sale_program_id: &Pubkey,
     ) -> ProgramResult {
+        msg!(
+            "price: {}, start_time: {}, end_time: {}, token_sale_program_id: {}",
+            price,
+            start_time,
+            end_time,
+            token_sale_program_id
+        );
         let account_info_iter = &mut account_info_list.iter();
 
         let seller_account_info = next_account_info(account_info_iter)?;
@@ -99,6 +109,7 @@ impl Processor {
             true,
             *seller_account_info.key,
             *temp_token_account_info.key,
+            total_sale_token_amount,
             price,
             start_time,
             end_time,
@@ -208,6 +219,7 @@ impl Processor {
         )?;
 
         let swap_receive_token_amount = sol_amount * token_sale_program_account_data.price;
+
         msg!(
             "Transfer {} Token : temp token account -> buyer token account",
             swap_receive_token_amount

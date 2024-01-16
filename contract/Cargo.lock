@@ -1559,6 +1559,7 @@ version = "0.1.0"
 dependencies = [
  "ahash 0.8.6",
  "arrayref",
+ "borsh 0.10.3",
  "solana-program",
  "spl-token",
  "thiserror",
