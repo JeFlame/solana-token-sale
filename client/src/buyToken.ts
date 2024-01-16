@@ -11,7 +11,12 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { createAccountInfo, checkAccountInitialized, getConfig } from "./utils";
+import {
+  createAccountInfo,
+  checkAccountInitialized,
+  getConfig,
+  getIdoConfig,
+} from "./utils";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   TokenSaleAccountLayoutInterface,
@@ -45,6 +50,9 @@ const transaction = async () => {
   );
   const idoTokenAccountPubkey = new PublicKey(
     process.env.IDO_TOKEN_ACCOUNT_PUBKEY!
+  );
+  const idoConfigAccountPubkey = new PublicKey(
+    process.env.IDO_CONFIG_ACCOUNT_PUBKEY!
   );
 
   ///////// GET CONFIG FROM CONTRACT
@@ -90,7 +98,7 @@ const transaction = async () => {
   buyTokenInstructionLayout.encode(
     {
       variant: 1, // instruction
-      sol_amount: new BN(0.0123 * 10 ** 9),
+      sol_amount: new BN(1.123 * 10 ** 9),
     },
     buffer
   );
@@ -112,6 +120,7 @@ const transaction = async () => {
       createAccountInfo(buyerTokenAccount.address, false, true),
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
       createAccountInfo(PDA[0], false, false),
+      createAccountInfo(idoConfigAccountPubkey, false, true),
     ],
     data: buffer,
   });
@@ -140,10 +149,11 @@ const transaction = async () => {
   console.table([
     {
       sellerTokenAccountBalance:
-        sellerTokenAccountBalance.value.amount.toString(),
-      idoTokenAccountBalance: idoTokenAccountBalance.value.amount.toString(),
+        +sellerTokenAccountBalance.value.amount.toString() / LAMPORTS_PER_SOL,
+      idoTokenAccountBalance:
+        +idoTokenAccountBalance.value.amount.toString() / LAMPORTS_PER_SOL,
       buyerTokenAccountBalance:
-        buyerTokenAccountBalance.value.amount.toString(),
+        +buyerTokenAccountBalance.value.amount.toString() / LAMPORTS_PER_SOL,
     },
   ]);
 
@@ -155,6 +165,8 @@ const transaction = async () => {
     buyerKeypair.publicKey,
     "confirmed"
   );
+
+  await getIdoConfig(idoConfigAccountPubkey, connection);
 
   console.table([
     {

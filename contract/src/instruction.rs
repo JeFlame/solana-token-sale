@@ -3,7 +3,7 @@ use solana_program::program_error::ProgramError;
 
 pub enum TokenSaleInstruction {
     InitTokenSale {
-        total_sale_token_amount: u64,
+        total_sale_token: u64,
         price: u64,
         start_time: u64,
         end_time: u64,
@@ -16,7 +16,7 @@ pub enum TokenSaleInstruction {
 
 #[derive(BorshDeserialize)]
 struct InitTokenSalePayload {
-    total_sale_token_amount: u64,
+    total_sale_token: u64,
     price: u64,
     start_time: u64,
     end_time: u64,
@@ -39,7 +39,7 @@ impl TokenSaleInstruction {
             0 => {
                 let payload = InitTokenSalePayload::try_from_slice(rest).unwrap();
                 Self::InitTokenSale {
-                    total_sale_token_amount: payload.total_sale_token_amount,
+                    total_sale_token: payload.total_sale_token,
                     price: payload.price,
                     start_time: payload.start_time,
                     end_time: payload.end_time,

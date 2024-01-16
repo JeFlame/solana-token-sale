@@ -1,4 +1,9 @@
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+} from "@solana/web3.js";
 import {
   TokenSaleAccountLayoutInterface,
   ExpectedTokenSaleAccountLayoutInterface,
@@ -6,6 +11,7 @@ import {
 import BN = require("bn.js");
 import fs = require("fs");
 import * as borsh from "@project-serum/borsh";
+const { getAccount, getMint } = require("@solana/spl-token");
 
 const envItems = [
   "CUSTOM_PROGRAM_ID",
@@ -17,6 +23,7 @@ const envItems = [
   "SELLER_TOKEN_ACCOUNT_PUBKEY",
   "IDO_TOKEN_ACCOUNT_PUBKEY",
   "TOKEN_SALE_PROGRAM_ACCOUNT_PUBKEY",
+  "IDO_CONFIG_ACCOUNT_PUBKEY",
 ];
 
 export function updateEnv() {
@@ -59,7 +66,7 @@ export const getConfig = async (signer: PublicKey, connection: Connection) => {
     borsh.bool("is_initialized"),
     borsh.publicKey("seller_pubkey"),
     borsh.publicKey("ido_token_account_pubkey"),
-    borsh.u64("total_sale_token_amount"),
+    borsh.u64("total_sale_token"),
     borsh.u64("price"),
     borsh.u64("start_time"),
     borsh.u64("end_time"),
@@ -74,10 +81,39 @@ export const getConfig = async (signer: PublicKey, connection: Connection) => {
     const config = {
       seller_pubkey: data["seller_pubkey"].toString(),
       ido_token_account_pubkey: data["ido_token_account_pubkey"].toString(),
-      total_sale_token: data["total_sale_token_amount"].toString(),
+      total_sale_token: data["total_sale_token"].toString(),
       price: data["price"].toString(),
       start_time: data["start_time"].toString(),
       end_time: data["end_time"].toString(),
+    };
+    console.log(config);
+    return config;
+  }
+};
+
+export const getIdoConfig = async (
+  signer: PublicKey,
+  connection: Connection
+) => {
+  const borshConfigSchema = borsh.struct([
+    borsh.bool("is_initialized"),
+    borsh.u64("total_sale_token"),
+    borsh.u64("current_sale_token"),
+    borsh.u64("total_sale_sol"),
+    borsh.u64("current_sale_sol"),
+  ]);
+
+  const customAccount = await connection.getAccountInfo(signer);
+  if (customAccount) {
+    const data = borshConfigSchema.decode(
+      customAccount ? customAccount.data : null
+    );
+    const config = {
+      total_sale_token: +data["total_sale_token"].toString() / LAMPORTS_PER_SOL,
+      current_sale_token:
+        +data["current_sale_token"].toString() / LAMPORTS_PER_SOL,
+      total_sale_sol: +data["total_sale_sol"].toString() / LAMPORTS_PER_SOL,
+      current_sale_sol: +data["current_sale_sol"].toString() / LAMPORTS_PER_SOL,
     };
     console.log(config);
     return config;
@@ -142,4 +178,16 @@ export const checkAccountDataIsValid = (
     data[key] = expectedValue.toString();
   });
   console.table([data]);
+};
+
+export const getTokenBalanceSpl = async (
+  connection: Connection,
+  tokenAccount: PublicKey
+) => {
+  const info = await getAccount(connection, tokenAccount);
+  const amount = Number(info.amount);
+  const mint = await getMint(connection, info.mint);
+  const balance = amount / 10 ** mint.decimals;
+  console.log("Balance (using Solana-Web3.js): ", balance);
+  return balance;
 };

@@ -13,7 +13,7 @@ import {
 } from "@solana/web3.js";
 import BN = require("bn.js");
 import * as borsh from "@project-serum/borsh";
-import { createAccountInfo, updateEnv, getConfig } from "./utils";
+import { createAccountInfo, updateEnv, getConfig, getIdoConfig } from "./utils";
 
 import { TokenSaleAccountLayout } from "./account";
 import { AccountLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -22,7 +22,7 @@ import base58 = require("bs58");
 const transaction = async () => {
   const configInstructionLayout = borsh.struct([
     borsh.u8("variant"),
-    borsh.u64("total_sale_token_amount"),
+    borsh.u64("total_sale_token"),
     borsh.u64("price"),
     borsh.u64("start_time"),
     borsh.u64("end_time"),
@@ -48,7 +48,7 @@ const transaction = async () => {
   // Token Address -> Id contract token wukong
   const tokenMintAccountPubkey = new PublicKey(process.env.TOKEN_PUBKEY!);
 
-  const totalSaleTokenAmount = 150000 * 10 ** 8;
+  const totalSaleTokenAmount = 10 * 10 ** 6 * 10 ** 8; // 100 million
 
   const idoTokenAccountKeypair = new Keypair();
   const createIdoTokenAccountIx = SystemProgram.createAccount({
@@ -89,14 +89,14 @@ const transaction = async () => {
   });
 
   let buffer = Buffer.alloc(1000);
-  const price = 1500;
+  const price = 10000;
   const nowTime = Number((new Date().getTime() / 1000).toFixed(0));
   const startTime = nowTime;
   const endTime = nowTime + 1000000;
   configInstructionLayout.encode(
     {
       variant: 0, // instruction
-      total_sale_token_amount: new BN(totalSaleTokenAmount),
+      total_sale_token: new BN(totalSaleTokenAmount),
       price: new BN(price),
       start_time: new BN(startTime),
       end_time: new BN(endTime),
@@ -105,6 +105,18 @@ const transaction = async () => {
   );
 
   buffer = buffer.slice(0, configInstructionLayout.getSpan(buffer));
+
+  const idoConfigProgramAccountKeypair = new Keypair();
+  const createIdoConfigProgramAccountIx = SystemProgram.createAccount({
+    fromPubkey: sellerKeypair.publicKey,
+    newAccountPubkey: idoConfigProgramAccountKeypair.publicKey,
+    lamports: await connection.getMinimumBalanceForRentExemption(
+      TokenSaleAccountLayout.span
+    ),
+    space: TokenSaleAccountLayout.span,
+    programId: tokenSaleProgramId,
+  });
+
   const initTokenSaleProgramIx = new TransactionInstruction({
     programId: tokenSaleProgramId,
     keys: [
@@ -113,6 +125,7 @@ const transaction = async () => {
       createAccountInfo(tokenSaleProgramAccountKeypair.publicKey, false, true),
       createAccountInfo(SYSVAR_RENT_PUBKEY, false, false),
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
+      createAccountInfo(idoConfigProgramAccountKeypair.publicKey, false, true),
     ],
     data: buffer,
   });
@@ -136,12 +149,18 @@ const transaction = async () => {
     initIdoTokenAccountIx,
     transferTokenToTempTokenAccountIx,
     createTokenSaleProgramAccountIx,
+    createIdoConfigProgramAccountIx,
     initTokenSaleProgramIx
   );
 
   await connection.sendTransaction(
     tx,
-    [sellerKeypair, idoTokenAccountKeypair, tokenSaleProgramAccountKeypair],
+    [
+      sellerKeypair,
+      idoTokenAccountKeypair,
+      tokenSaleProgramAccountKeypair,
+      idoConfigProgramAccountKeypair,
+    ],
     {
       skipPreflight: false,
       preflightCommitment: "confirmed",
@@ -154,6 +173,7 @@ const transaction = async () => {
 
   //phase2 (check Transaction result is valid)
   await getConfig(tokenSaleProgramAccountKeypair.publicKey, connection);
+  await getIdoConfig(idoConfigProgramAccountKeypair.publicKey, connection);
   console.table([
     {
       tokenSaleProgramAccountPubkey:
@@ -167,6 +187,8 @@ const transaction = async () => {
     tokenSaleProgramAccountKeypair.publicKey.toString();
   process.env.IDO_TOKEN_ACCOUNT_PUBKEY =
     idoTokenAccountKeypair.publicKey.toString();
+  process.env.IDO_CONFIG_ACCOUNT_PUBKEY =
+    idoConfigProgramAccountKeypair.publicKey.toString();
   updateEnv();
 };
 

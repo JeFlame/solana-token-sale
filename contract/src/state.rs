@@ -1,3 +1,4 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
@@ -10,7 +11,7 @@ pub struct TokenSaleProgramData {
     pub is_initialized: bool,
     pub seller_pubkey: Pubkey,
     pub ido_token_account_pubkey: Pubkey,
-    pub total_sale_token_amount: u64,
+    pub total_sale_token: u64,
     pub price: u64,
     pub start_time: u64,
     pub end_time: u64,
@@ -22,7 +23,7 @@ impl TokenSaleProgramData {
         is_initialized: bool,             // 1
         seller_pubkey: Pubkey,            // 32
         ido_token_account_pubkey: Pubkey, // 32
-        total_sale_token_amount: u64,
+        total_sale_token: u64,
         price: u64,
         start_time: u64,
         end_time: u64,
@@ -30,7 +31,7 @@ impl TokenSaleProgramData {
         self.is_initialized = is_initialized;
         self.seller_pubkey = seller_pubkey;
         self.ido_token_account_pubkey = ido_token_account_pubkey;
-        self.total_sale_token_amount = total_sale_token_amount;
+        self.total_sale_token = total_sale_token;
         self.price = price;
         self.start_time = start_time;
         self.end_time = end_time;
@@ -53,7 +54,7 @@ impl Pack for TokenSaleProgramData {
             is_initialized,
             seller_pubkey,
             ido_token_account_pubkey,
-            total_sale_token_amount,
+            total_sale_token,
             price,
             start_time,
             end_time,
@@ -69,7 +70,7 @@ impl Pack for TokenSaleProgramData {
             is_initialized,
             seller_pubkey: Pubkey::new_from_array(*seller_pubkey),
             ido_token_account_pubkey: Pubkey::new_from_array(*ido_token_account_pubkey),
-            total_sale_token_amount: u64::from_le_bytes(*total_sale_token_amount),
+            total_sale_token: u64::from_le_bytes(*total_sale_token),
             price: u64::from_le_bytes(*price),
             start_time: u64::from_le_bytes(*start_time),
             end_time: u64::from_le_bytes(*end_time),
@@ -82,7 +83,7 @@ impl Pack for TokenSaleProgramData {
             is_initialized_dst,
             seller_pubkey_dst,
             ido_token_account_pubkey_dst,
-            total_sale_token_amount_dst,
+            total_sale_token_dst,
             price_dst,
             start_time_dst,
             end_time_dst,
@@ -92,7 +93,7 @@ impl Pack for TokenSaleProgramData {
             is_initialized,
             seller_pubkey,
             ido_token_account_pubkey,
-            total_sale_token_amount,
+            total_sale_token,
             price,
             start_time,
             end_time,
@@ -101,9 +102,26 @@ impl Pack for TokenSaleProgramData {
         is_initialized_dst[0] = *is_initialized as u8;
         seller_pubkey_dst.copy_from_slice(seller_pubkey.as_ref());
         ido_token_account_pubkey_dst.copy_from_slice(ido_token_account_pubkey.as_ref());
-        *total_sale_token_amount_dst = total_sale_token_amount.to_le_bytes();
+        *total_sale_token_dst = total_sale_token.to_le_bytes();
         *price_dst = price.to_le_bytes();
         *start_time_dst = start_time.to_le_bytes();
         *end_time_dst = end_time.to_le_bytes();
+    }
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct InfoTokenSale {
+    pub is_initialized: bool,
+    pub total_sale_token: u64,
+    pub current_sale_token: u64,
+    pub total_sale_sol: u64,
+    pub current_sale_sol: u64,
+}
+
+impl Sealed for InfoTokenSale {}
+
+impl IsInitialized for InfoTokenSale {
+    fn is_initialized(&self) -> bool {
+        self.is_initialized
     }
 }

@@ -7,7 +7,7 @@ export const TokenSaleAccountLayout = BufferLayout.struct([
   BufferLayout.u8("isInitialized"), //1byte
   BufferLayout.blob(32, "sellerPubkey"), //pubkey(32byte)
   BufferLayout.blob(32, "idoTokenAccountPubkey"), //pubkey(32byte)
-  BufferLayout.blob(8, "totalSaleTokenAmount"), //8byte
+  BufferLayout.blob(8, "totalSaleToken"), //8byte
   BufferLayout.blob(8, "price"), //8byte
   BufferLayout.blob(8, "startTime"), //8byte
   BufferLayout.blob(8, "endTime"), //8byte
@@ -18,7 +18,7 @@ export interface TokenSaleAccountLayoutInterface {
   isInitialized: number;
   sellerPubkey: Uint8Array;
   idoTokenAccountPubkey: Uint8Array;
-  totalSaleTokenAmount: Uint8Array;
+  totalSaleToken: Uint8Array;
   price: Uint8Array;
   startTime: Uint8Array;
   endTime: Uint8Array;
@@ -29,7 +29,7 @@ export interface ExpectedTokenSaleAccountLayoutInterface {
   isInitialized: number;
   sellerPubkey: PublicKey;
   idoTokenAccountPubkey: PublicKey;
-  totalSaleTokenAmount: number;
+  totalSaleToken: number;
   price: number;
   startTime: number;
   endTime: number;
