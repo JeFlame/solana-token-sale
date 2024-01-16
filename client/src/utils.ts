@@ -5,6 +5,7 @@ import {
 } from "./account";
 import BN = require("bn.js");
 import fs = require("fs");
+import * as borsh from "@project-serum/borsh";
 
 const envItems = [
   "CUSTOM_PROGRAM_ID",
@@ -14,7 +15,7 @@ const envItems = [
   "BUYER_PRIVATE_KEY",
   "TOKEN_PUBKEY",
   "SELLER_TOKEN_ACCOUNT_PUBKEY",
-  "TEMP_TOKEN_ACCOUNT_PUBKEY",
+  "IDO_TOKEN_ACCOUNT_PUBKEY",
   "TOKEN_SALE_PROGRAM_ACCOUNT_PUBKEY",
 ];
 
@@ -51,6 +52,36 @@ export const createAccountInfo = (
     isSigner: isSigner,
     isWritable: isWritable,
   };
+};
+
+export const getConfig = async (signer: PublicKey, connection: Connection) => {
+  const borshConfigSchema = borsh.struct([
+    borsh.bool("is_initialized"),
+    borsh.publicKey("seller_pubkey"),
+    borsh.publicKey("ido_token_account_pubkey"),
+    borsh.u64("total_sale_token_amount"),
+    borsh.u64("price"),
+    borsh.u64("start_time"),
+    borsh.u64("end_time"),
+  ]);
+
+  const customAccount = await connection.getAccountInfo(signer);
+  console.log({ customAccount });
+  if (customAccount) {
+    const data = borshConfigSchema.decode(
+      customAccount ? customAccount.data : null
+    );
+    const config = {
+      seller_pubkey: data["seller_pubkey"].toString(),
+      ido_token_account_pubkey: data["ido_token_account_pubkey"].toString(),
+      total_sale_token: data["total_sale_token_amount"].toString(),
+      price: data["price"].toString(),
+      start_time: data["start_time"].toString(),
+      end_time: data["end_time"].toString(),
+    };
+    console.log(config);
+    return config;
+  }
 };
 
 export const checkAccountInitialized = async (

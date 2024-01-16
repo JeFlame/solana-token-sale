@@ -66,13 +66,6 @@ impl Processor {
         end_time: u64,
         token_sale_program_id: &Pubkey,
     ) -> ProgramResult {
-        msg!(
-            "price: {}, start_time: {}, end_time: {}, token_sale_program_id: {}",
-            price,
-            start_time,
-            end_time,
-            token_sale_program_id
-        );
         let account_info_iter = &mut account_info_list.iter();
 
         let seller_account_info = next_account_info(account_info_iter)?;
@@ -80,8 +73,8 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        let temp_token_account_info = next_account_info(account_info_iter)?;
-        if *temp_token_account_info.owner != spl_token::id() {
+        let ido_token_account_info = next_account_info(account_info_iter)?;
+        if *ido_token_account_info.owner != spl_token::id() {
             return Err(ProgramError::IncorrectProgramId);
         }
 
@@ -108,7 +101,7 @@ impl Processor {
         token_sale_program_account_data.init(
             true,
             *seller_account_info.key,
-            *temp_token_account_info.key,
+            *ido_token_account_info.key,
             total_sale_token_amount,
             price,
             start_time,
@@ -126,7 +119,7 @@ impl Processor {
         let token_program = next_account_info(account_info_iter)?;
         let set_authority_ix = spl_token::instruction::set_authority(
             token_program.key,
-            temp_token_account_info.key,
+            ido_token_account_info.key,
             Some(&pda),
             spl_token::instruction::AuthorityType::AccountOwner,
             seller_account_info.key,
@@ -137,7 +130,7 @@ impl Processor {
             &set_authority_ix,
             &[
                 token_program.clone(),
-                temp_token_account_info.clone(),
+                ido_token_account_info.clone(),
                 seller_account_info.clone(),
             ],
         )?;
@@ -193,7 +186,7 @@ impl Processor {
             return Err(ProgramError::InvalidAccountData);
         }
 
-        if *temp_token_account_info.key != token_sale_program_account_data.temp_token_account_pubkey
+        if *temp_token_account_info.key != token_sale_program_account_data.ido_token_account_pubkey
         {
             return Err(ProgramError::InvalidAccountData);
         }

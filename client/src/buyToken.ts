@@ -11,25 +11,27 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { createAccountInfo, checkAccountInitialized } from "./utils";
+import { createAccountInfo, checkAccountInitialized, getConfig } from "./utils";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   TokenSaleAccountLayoutInterface,
   TokenSaleAccountLayout,
 } from "./account";
 import base58 = require("bs58");
+import * as borsh from "@project-serum/borsh";
 import BN = require("bn.js");
 
-type InstructionNumber = 0 | 1 | 2;
-
 const transaction = async () => {
+  const buyTokenInstructionLayout = borsh.struct([
+    borsh.u8("variant"),
+    borsh.u64("sol_amount"),
+  ]);
+
   //phase1 (setup Transaction & send Transaction)
   console.log("Setup Transaction");
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
   const tokenSaleProgramId = new PublicKey(process.env.CUSTOM_PROGRAM_ID!);
   const sellerPubkey = new PublicKey(process.env.SELLER_PUBLIC_KEY!);
-  const buyerPubkey = new PublicKey(process.env.BUYER_PUBLIC_KEY!);
-
   const buyerKeypair = Keypair.fromSecretKey(
     base58.decode(process.env.BUYER_PRIVATE_KEY!)
   );
@@ -41,11 +43,12 @@ const transaction = async () => {
   const sellerTokenAccountPubkey = new PublicKey(
     process.env.SELLER_TOKEN_ACCOUNT_PUBKEY!
   );
-  const tempTokenAccountPubkey = new PublicKey(
-    process.env.TEMP_TOKEN_ACCOUNT_PUBKEY!
+  const idoTokenAccountPubkey = new PublicKey(
+    process.env.IDO_TOKEN_ACCOUNT_PUBKEY!
   );
-  const instruction: InstructionNumber = 1;
 
+  ///////// GET CONFIG FROM CONTRACT
+  await getConfig(tokenSaleProgramAccountPubkey, connection);
   const tokenSaleProgramAccount = await checkAccountInitialized(
     connection,
     tokenSaleProgramAccountPubkey
@@ -55,14 +58,13 @@ const transaction = async () => {
     encodedTokenSaleProgramAccountData
   ) as TokenSaleAccountLayoutInterface;
 
-  console.log(decodedTokenSaleProgramAccountData);
   const tokenSaleProgramAccountData = {
     isInitialized: decodedTokenSaleProgramAccountData.isInitialized,
     sellerPubkey: new PublicKey(
       decodedTokenSaleProgramAccountData.sellerPubkey
     ),
-    tempTokenAccountPubkey: new PublicKey(
-      decodedTokenSaleProgramAccountData.tempTokenAccountPubkey
+    idoTokenAccountPubkey: new PublicKey(
+      decodedTokenSaleProgramAccountData.idoTokenAccountPubkey
     ),
     price: decodedTokenSaleProgramAccountData.price,
     startTime: decodedTokenSaleProgramAccountData.startTime,
@@ -84,13 +86,24 @@ const transaction = async () => {
     tokenSaleProgramId
   );
 
+  let buffer = Buffer.alloc(1000);
+  buyTokenInstructionLayout.encode(
+    {
+      variant: 1, // instruction
+      sol_amount: new BN(0.0123 * 10 ** 9),
+    },
+    buffer
+  );
+
+  buffer = buffer.slice(0, buyTokenInstructionLayout.getSpan(buffer));
+
   const buyTokenIx = new TransactionInstruction({
     programId: tokenSaleProgramId,
     keys: [
       createAccountInfo(buyerKeypair.publicKey, true, true),
       createAccountInfo(tokenSaleProgramAccountData.sellerPubkey, false, true),
       createAccountInfo(
-        tokenSaleProgramAccountData.tempTokenAccountPubkey,
+        tokenSaleProgramAccountData.idoTokenAccountPubkey,
         false,
         true
       ),
@@ -100,9 +113,7 @@ const transaction = async () => {
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
       createAccountInfo(PDA[0], false, false),
     ],
-    data: Buffer.from(
-      Uint8Array.of(instruction, ...new BN(123000000).toArray("le", 8))
-    ),
+    data: buffer,
   });
   const tx = new Transaction().add(buyTokenIx);
 
@@ -119,8 +130,8 @@ const transaction = async () => {
   const sellerTokenAccountBalance = await connection.getTokenAccountBalance(
     sellerTokenAccountPubkey
   );
-  const tempTokenAccountBalance = await connection.getTokenAccountBalance(
-    tempTokenAccountPubkey
+  const idoTokenAccountBalance = await connection.getTokenAccountBalance(
+    idoTokenAccountPubkey
   );
   const buyerTokenAccountBalance = await connection.getTokenAccountBalance(
     buyerTokenAccount.address
@@ -130,7 +141,7 @@ const transaction = async () => {
     {
       sellerTokenAccountBalance:
         sellerTokenAccountBalance.value.amount.toString(),
-      tempTokenAccountBalance: tempTokenAccountBalance.value.amount.toString(),
+      idoTokenAccountBalance: idoTokenAccountBalance.value.amount.toString(),
       buyerTokenAccountBalance:
         buyerTokenAccountBalance.value.amount.toString(),
     },

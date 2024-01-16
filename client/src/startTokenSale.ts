@@ -13,22 +13,11 @@ import {
 } from "@solana/web3.js";
 import BN = require("bn.js");
 import * as borsh from "@project-serum/borsh";
-import {
-  checkAccountInitialized,
-  checkAccountDataIsValid,
-  createAccountInfo,
-  updateEnv,
-} from "./utils";
+import { createAccountInfo, updateEnv, getConfig } from "./utils";
 
-import {
-  TokenSaleAccountLayout,
-  TokenSaleAccountLayoutInterface,
-  ExpectedTokenSaleAccountLayoutInterface,
-} from "./account";
+import { TokenSaleAccountLayout } from "./account";
 import { AccountLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import base58 = require("bs58");
-
-type InstructionNumber = 0 | 1 | 2;
 
 const transaction = async () => {
   const configInstructionLayout = borsh.struct([
@@ -42,30 +31,29 @@ const transaction = async () => {
   //phase1 (setup Transaction & send Transaction)
   console.log("Setup Transaction");
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+
+  // Program Address -> smartcontract
   const tokenSaleProgramId = new PublicKey(process.env.CUSTOM_PROGRAM_ID!);
-  // const sellerPubkey = new PublicKey(process.env.SELLER_PUBLIC_KEY!);
-  // const sellerPrivateKey = Uint8Array.from(
-  //   JSON.parse(process.env.SELLER_PRIVATE_KEY!)
-  // );
-  // const sellerKeypair = new Keypair({
-  //   publicKey: sellerPubkey.toBytes(),
-  //   secretKey: sellerPrivateKey,
-  // });
+
+  // Seller keypair
   const sellerKeypair = Keypair.fromSecretKey(
     base58.decode(process.env.SELLER_PRIVATE_KEY!)
   );
-  const tokenMintAccountPubkey = new PublicKey(process.env.TOKEN_PUBKEY!);
+
+  // Seller public key
   const sellerTokenAccountPubkey = new PublicKey(
     process.env.SELLER_TOKEN_ACCOUNT_PUBKEY!
   );
 
-  const instruction: InstructionNumber = 0;
+  // Token Address -> Id contract token wukong
+  const tokenMintAccountPubkey = new PublicKey(process.env.TOKEN_PUBKEY!);
+
   const totalSaleTokenAmount = 150000 * 10 ** 8;
 
-  const tempTokenAccountKeypair = new Keypair();
-  const createTempTokenAccountIx = SystemProgram.createAccount({
+  const idoTokenAccountKeypair = new Keypair();
+  const createIdoTokenAccountIx = SystemProgram.createAccount({
     fromPubkey: sellerKeypair.publicKey,
-    newAccountPubkey: tempTokenAccountKeypair.publicKey,
+    newAccountPubkey: idoTokenAccountKeypair.publicKey,
     lamports: await connection.getMinimumBalanceForRentExemption(
       AccountLayout.span
     ),
@@ -73,17 +61,17 @@ const transaction = async () => {
     programId: TOKEN_PROGRAM_ID,
   });
 
-  const initTempTokenAccountIx = Token.createInitAccountInstruction(
+  const initIdoTokenAccountIx = Token.createInitAccountInstruction(
     TOKEN_PROGRAM_ID,
     tokenMintAccountPubkey,
-    tempTokenAccountKeypair.publicKey,
+    idoTokenAccountKeypair.publicKey,
     sellerKeypair.publicKey
   );
 
   const transferTokenToTempTokenAccountIx = Token.createTransferInstruction(
     TOKEN_PROGRAM_ID,
     sellerTokenAccountPubkey,
-    tempTokenAccountKeypair.publicKey,
+    idoTokenAccountKeypair.publicKey,
     sellerKeypair.publicKey,
     [],
     totalSaleTokenAmount
@@ -107,7 +95,7 @@ const transaction = async () => {
   const endTime = nowTime + 1000000;
   configInstructionLayout.encode(
     {
-      variant: 0,
+      variant: 0, // instruction
       total_sale_token_amount: new BN(totalSaleTokenAmount),
       price: new BN(price),
       start_time: new BN(startTime),
@@ -121,7 +109,7 @@ const transaction = async () => {
     programId: tokenSaleProgramId,
     keys: [
       createAccountInfo(sellerKeypair.publicKey, true, false),
-      createAccountInfo(tempTokenAccountKeypair.publicKey, false, true),
+      createAccountInfo(idoTokenAccountKeypair.publicKey, false, true),
       createAccountInfo(tokenSaleProgramAccountKeypair.publicKey, false, true),
       createAccountInfo(SYSVAR_RENT_PUBKEY, false, false),
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
@@ -133,7 +121,7 @@ const transaction = async () => {
     TOKEN_PROGRAM_ID,
     tokenMintAccountPubkey: String(tokenMintAccountPubkey),
     sellerTokenAccountPubkey: String(sellerTokenAccountPubkey),
-    tempTokenAccountKeypair: String(tempTokenAccountKeypair.publicKey),
+    idoTokenAccountKeypair: String(idoTokenAccountKeypair.publicKey),
     sellerKeypair: String(sellerKeypair.publicKey),
     tokenSaleProgramAccountKeypair: String(
       tokenSaleProgramAccountKeypair.publicKey
@@ -144,8 +132,8 @@ const transaction = async () => {
   //make transaction with several instructions(ix)
   console.log("Send transaction...\n");
   const tx = new Transaction().add(
-    createTempTokenAccountIx,
-    initTempTokenAccountIx,
+    createIdoTokenAccountIx,
+    initIdoTokenAccountIx,
     transferTokenToTempTokenAccountIx,
     createTokenSaleProgramAccountIx,
     initTokenSaleProgramIx
@@ -153,7 +141,7 @@ const transaction = async () => {
 
   await connection.sendTransaction(
     tx,
-    [sellerKeypair, tempTokenAccountKeypair, tokenSaleProgramAccountKeypair],
+    [sellerKeypair, idoTokenAccountKeypair, tokenSaleProgramAccountKeypair],
     {
       skipPreflight: false,
       preflightCommitment: "confirmed",
@@ -165,34 +153,7 @@ const transaction = async () => {
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
   //phase2 (check Transaction result is valid)
-  const tokenSaleProgramAccount = await checkAccountInitialized(
-    connection,
-    tokenSaleProgramAccountKeypair.publicKey
-  );
-
   await getConfig(tokenSaleProgramAccountKeypair.publicKey, connection);
-  const encodedTokenSaleProgramAccountData = tokenSaleProgramAccount.data;
-  const decodedTokenSaleProgramAccountData = TokenSaleAccountLayout.decode(
-    encodedTokenSaleProgramAccountData
-  ) as TokenSaleAccountLayoutInterface;
-
-  const expectedTokenSaleProgramAccountData: ExpectedTokenSaleAccountLayoutInterface =
-    {
-      isInitialized: 1,
-      sellerPubkey: sellerKeypair.publicKey,
-      tempTokenAccountPubkey: tempTokenAccountKeypair.publicKey,
-      totalSaleTokenAmount: totalSaleTokenAmount,
-      price: price,
-      startTime: startTime,
-      endTime: endTime,
-    };
-
-  console.log("Current TokenSaleProgramAccountData:");
-  checkAccountDataIsValid(
-    decodedTokenSaleProgramAccountData,
-    expectedTokenSaleProgramAccountData
-  );
-
   console.table([
     {
       tokenSaleProgramAccountPubkey:
@@ -204,37 +165,9 @@ const transaction = async () => {
 
   process.env.TOKEN_SALE_PROGRAM_ACCOUNT_PUBKEY =
     tokenSaleProgramAccountKeypair.publicKey.toString();
-  process.env.TEMP_TOKEN_ACCOUNT_PUBKEY =
-    tempTokenAccountKeypair.publicKey.toString();
+  process.env.IDO_TOKEN_ACCOUNT_PUBKEY =
+    idoTokenAccountKeypair.publicKey.toString();
   updateEnv();
 };
-
-async function getConfig(signer: PublicKey, connection: Connection) {
-  const borshConfigSchema = borsh.struct([
-    borsh.bool("is_initialized"),
-    borsh.publicKey("seller_pubkey"),
-    borsh.publicKey("temp_token_account_pubkey"),
-    borsh.u64("total_sale_token_amount"),
-    borsh.u64("price"),
-    borsh.u64("start_time"),
-    borsh.u64("end_time"),
-  ]);
-
-  const customAccount = await connection.getAccountInfo(signer);
-  console.log({ customAccount });
-  if (customAccount) {
-    const data = borshConfigSchema.decode(
-      customAccount ? customAccount.data : null
-    );
-    console.log({
-      seller_pubkey: data["seller_pubkey"].toString(),
-      temp_token_account_pubkey: data["temp_token_account_pubkey"].toString(),
-      total_sale_token: data["total_sale_token_amount"].toString(),
-      price: data["price"].toString(),
-      start_time: data["start_time"].toString(),
-      end_time: data["end_time"].toString(),
-    });
-  }
-}
 
 transaction();
