@@ -17,7 +17,14 @@ import {
   getConfig,
   getIdoConfig,
 } from "./utils";
-import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  createAssociatedTokenAccount,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddressSync,
+  getMinimumBalanceForRentExemptMint,
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   TokenSaleAccountLayoutInterface,
   TokenSaleAccountLayout,
@@ -35,8 +42,10 @@ const transaction = async () => {
   //phase1 (setup Transaction & send Transaction)
   console.log("Setup Transaction");
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+
   const tokenSaleProgramId = new PublicKey(process.env.CUSTOM_PROGRAM_ID!);
   const sellerPubkey = new PublicKey(process.env.SELLER_PUBLIC_KEY!);
+
   const buyerKeypair = Keypair.fromSecretKey(
     base58.decode(process.env.BUYER_PRIVATE_KEY!)
   );
@@ -79,17 +88,7 @@ const transaction = async () => {
     endTime: decodedTokenSaleProgramAccountData.endTime,
   };
 
-  const token = new Token(
-    connection,
-    tokenPubkey,
-    TOKEN_PROGRAM_ID,
-    buyerKeypair
-  );
-  const buyerTokenAccount = await token.getOrCreateAssociatedAccountInfo(
-    buyerKeypair.publicKey
-  );
-
-  const PDA = await PublicKey.findProgramAddress(
+  const PDA = PublicKey.findProgramAddressSync(
     [Buffer.from("token_sale")],
     tokenSaleProgramId
   );
@@ -105,27 +104,54 @@ const transaction = async () => {
 
   buffer = buffer.slice(0, buyTokenInstructionLayout.getSpan(buffer));
 
+  const tx = new Transaction();
+
+  const buyerAta = getAssociatedTokenAddressSync(
+    tokenPubkey,
+    buyerKeypair.publicKey
+  );
+  const ataAccount = await connection.getAccountInfo(buyerAta);
+  if (!ataAccount) {
+    const ataInstruction = createAssociatedTokenAccountInstruction(
+      buyerKeypair.publicKey,
+      buyerAta,
+      buyerKeypair.publicKey,
+      tokenPubkey,
+      tokenSaleProgramId
+    );
+    tx.add(ataInstruction);
+  }
+
   const buyTokenIx = new TransactionInstruction({
     programId: tokenSaleProgramId,
     keys: [
+      //account 1
       createAccountInfo(buyerKeypair.publicKey, true, true),
+      // account 2
       createAccountInfo(tokenSaleProgramAccountData.sellerPubkey, false, true),
+      // account 3
       createAccountInfo(
         tokenSaleProgramAccountData.idoTokenAccountPubkey,
         false,
         true
       ),
+      // account 4
       createAccountInfo(tokenSaleProgramAccountPubkey, false, false),
+      // account 5
       createAccountInfo(SystemProgram.programId, false, false),
-      createAccountInfo(buyerTokenAccount.address, false, true),
+      // account 6
+      createAccountInfo(buyerAta, false, true),
+      // account 7
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
+      // account 8
       createAccountInfo(PDA[0], false, false),
+      // account 9
       createAccountInfo(idoConfigAccountPubkey, false, true),
     ],
     data: buffer,
   });
-  const tx = new Transaction().add(buyTokenIx);
 
+  tx.add(buyTokenIx);
   await connection.sendTransaction(tx, [buyerKeypair], {
     skipPreflight: false,
     preflightCommitment: "confirmed",
@@ -143,7 +169,7 @@ const transaction = async () => {
     idoTokenAccountPubkey
   );
   const buyerTokenAccountBalance = await connection.getTokenAccountBalance(
-    buyerTokenAccount.address
+    buyerAta
   );
 
   console.table([

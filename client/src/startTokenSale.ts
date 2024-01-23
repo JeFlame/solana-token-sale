@@ -16,7 +16,13 @@ import * as borsh from "@project-serum/borsh";
 import { createAccountInfo, updateEnv, getConfig, getIdoConfig } from "./utils";
 
 import { TokenSaleAccountLayout } from "./account";
-import { AccountLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  AccountLayout,
+  createInitializeAccountInstruction,
+  createTransferCheckedInstruction,
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import base58 = require("bs58");
 
 const transaction = async () => {
@@ -27,6 +33,8 @@ const transaction = async () => {
     borsh.u64("start_time"),
     borsh.u64("end_time"),
   ]);
+
+  const DECIMAL = 9;
 
   //phase1 (setup Transaction & send Transaction)
   console.log("Setup Transaction");
@@ -48,8 +56,9 @@ const transaction = async () => {
   // Token Address -> Id contract token wukong
   const tokenMintAccountPubkey = new PublicKey(process.env.TOKEN_PUBKEY!);
 
-  const totalSaleTokenAmount = 10 * 10 ** 6 * 10 ** 8; // 100 million
+  const totalSaleTokenAmount = 100 * 10 ** 6; // 100 million
 
+  console.log(totalSaleTokenAmount);
   const idoTokenAccountKeypair = new Keypair();
   const createIdoTokenAccountIx = SystemProgram.createAccount({
     fromPubkey: sellerKeypair.publicKey,
@@ -61,20 +70,17 @@ const transaction = async () => {
     programId: TOKEN_PROGRAM_ID,
   });
 
-  const initIdoTokenAccountIx = Token.createInitAccountInstruction(
-    TOKEN_PROGRAM_ID,
-    tokenMintAccountPubkey,
+  const initIdoTokenAccountIx = createInitializeAccountInstruction(
     idoTokenAccountKeypair.publicKey,
+    tokenMintAccountPubkey,
     sellerKeypair.publicKey
   );
 
-  const transferTokenToTempTokenAccountIx = Token.createTransferInstruction(
-    TOKEN_PROGRAM_ID,
+  const transferTokenToTempTokenAccountIx = createTransferInstruction(
     sellerTokenAccountPubkey,
     idoTokenAccountKeypair.publicKey,
     sellerKeypair.publicKey,
-    [],
-    totalSaleTokenAmount
+    totalSaleTokenAmount * Math.pow(10, DECIMAL)
   );
 
   const tokenSaleProgramAccountKeypair = new Keypair();
@@ -96,7 +102,9 @@ const transaction = async () => {
   configInstructionLayout.encode(
     {
       variant: 0, // instruction
-      total_sale_token: new BN(totalSaleTokenAmount),
+      total_sale_token: new BN(
+        `${totalSaleTokenAmount * Math.pow(10, DECIMAL)}`
+      ),
       price: new BN(price),
       start_time: new BN(startTime),
       end_time: new BN(endTime),

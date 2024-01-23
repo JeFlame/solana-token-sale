@@ -184,13 +184,19 @@ impl Processor {
         token_sale_program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        // account 1
         let buyer_account_info = next_account_info(account_info_iter)?;
         if !buyer_account_info.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
+        // account 2
         let seller_account_info = next_account_info(account_info_iter)?;
+
+        // account 3
         let ido_token_account_info = next_account_info(account_info_iter)?;
+
+        // account 4
         let token_sale_program_account_info = next_account_info(account_info_iter)?;
         let token_sale_program_account_data =
             TokenSaleProgramData::unpack(&token_sale_program_account_info.try_borrow_data()?)?;
@@ -231,6 +237,7 @@ impl Processor {
             sol_amount,
         );
 
+        // account 5
         let system_program = next_account_info(account_info_iter)?;
         invoke(
             &transfer_sol_to_seller,
@@ -247,7 +254,11 @@ impl Processor {
             "Transfer {} Token : ido token account -> buyer token account",
             swap_receive_token_amount
         );
+
+        // account 6
         let buyer_token_account_info = next_account_info(account_info_iter)?;
+
+        // account 7
         let token_program = next_account_info(account_info_iter)?;
         let (pda, bump_seed) =
             Pubkey::find_program_address(&[b"token_sale"], token_sale_program_id);
@@ -261,6 +272,7 @@ impl Processor {
             swap_receive_token_amount,
         )?;
 
+        // account 8
         let pda = next_account_info(account_info_iter)?;
         invoke_signed(
             &transfer_token_to_buyer_ix,
@@ -274,7 +286,7 @@ impl Processor {
         )?;
 
         //////////// CONFIG IDO
-        //  7 ido config account
+        //  account 9 ido config account
         let ido_config_account_info = next_account_info(account_info_iter)?;
         let mut config_data = borsh0_10::try_from_slice_unchecked::<InfoTokenSale>(
             &ido_config_account_info.data.borrow(),
