@@ -6,6 +6,7 @@
   "scripts": {
     "compile": "tsc -p ./tsconfig.json",
     "setup-validator": "solana-test-validator -r --bpf-program 6uVMMaKnFo26KkS32PqJYTv7r3zWXS4BomSQxa1D1WxJ",
+    "burn": "npm run compile && node build/burnNft.js",
     "setup": "npm run compile && node build/setup.js",
     "start": "npm run compile && node build/setup.js && node build/startTokenSale.js",
     "start:only": "npm run compile && node build/startTokenSale.js",
@@ -29,6 +30,7 @@
   "dependencies": {
     "@metaplex-foundation/js": "^0.20.1",
     "@metaplex-foundation/mpl-token-metadata": "^2.8.6",
+    "@project-serum/anchor": "^0.26.0",
     "@project-serum/borsh": "^0.2.5",
     "@solana/spl-token": "^0.3.11",
     "@solana/web3.js": "^1.29.1",
