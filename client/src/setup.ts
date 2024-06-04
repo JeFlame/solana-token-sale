@@ -35,8 +35,8 @@ const transaction = async () => {
   );
   const decimal = 9;
   const supply = 1 * 10 ** 9;
-  const name = "Wukong";
-  const symbol = "WUKONG";
+  const name = "Bonk";
+  const symbol = "BONK";
   const uri = "https://arweave.net/-0ye6AB8I9sWqWF5Zq0iSOrHELvd2D0Ik1NEkiHU49I";
 
   const mintKeypair = Keypair.generate();

@@ -20,8 +20,10 @@ import {
 import {
   createAssociatedTokenAccount,
   createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
   getAssociatedTokenAddressSync,
   getMinimumBalanceForRentExemptMint,
+  getOrCreateAssociatedTokenAccount,
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -33,6 +35,8 @@ import base58 = require("bs58");
 import * as borsh from "@project-serum/borsh";
 import BN = require("bn.js");
 
+const DECIMAL = 9;
+
 const transaction = async () => {
   const buyTokenInstructionLayout = borsh.struct([
     borsh.u8("variant"),
@@ -40,6 +44,7 @@ const transaction = async () => {
   ]);
 
   //phase1 (setup Transaction & send Transaction)
+  console.log(clusterApiUrl("devnet"));
   console.log("Setup Transaction");
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
@@ -62,6 +67,10 @@ const transaction = async () => {
   );
   const idoConfigAccountPubkey = new PublicKey(
     process.env.IDO_CONFIG_ACCOUNT_PUBKEY!
+  );
+
+  const prizePool = new PublicKey(
+    "2XNCcbF4UXbAQY6pDmHU4b6redJ9xiVMUr6EGh8PiadR"
   );
 
   ///////// GET CONFIG FROM CONTRACT
@@ -88,6 +97,11 @@ const transaction = async () => {
     endTime: decodedTokenSaleProgramAccountData.endTime,
   };
 
+  console.log(
+    tokenSaleProgramAccountData.idoTokenAccountPubkey,
+    idoTokenAccountPubkey
+  );
+
   const PDA = PublicKey.findProgramAddressSync(
     [Buffer.from("token_sale")],
     tokenSaleProgramId
@@ -97,7 +111,7 @@ const transaction = async () => {
   buyTokenInstructionLayout.encode(
     {
       variant: 1, // instruction
-      sol_amount: new BN(1.123 * 10 ** 9),
+      sol_amount: new BN(100 * 10 ** 9),
     },
     buffer
   );
@@ -110,48 +124,66 @@ const transaction = async () => {
     tokenPubkey,
     buyerKeypair.publicKey
   );
+  console.log({ buyerAta });
   const ataAccount = await connection.getAccountInfo(buyerAta);
+  console.log({ ataAccount });
   if (!ataAccount) {
-    const ataInstruction = createAssociatedTokenAccountInstruction(
-      buyerKeypair.publicKey,
-      buyerAta,
-      buyerKeypair.publicKey,
+    await getOrCreateAssociatedTokenAccount(
+      connection,
+      buyerKeypair,
       tokenPubkey,
-      tokenSaleProgramId
+      buyerKeypair.publicKey,
+      true
     );
-    tx.add(ataInstruction);
   }
+
+  // const transferTokenToTempTokenAccountIx = createTransferInstruction(
+  //   buyerAta,
+  //   idoTokenAccountPubkey,
+  //   buyerKeypair.publicKey,
+  //   new BN(0.12 * 10 ** 9).toNumber()
+  // );
+
+  // tx.add(transferTokenToTempTokenAccountIx);
 
   const buyTokenIx = new TransactionInstruction({
     programId: tokenSaleProgramId,
     keys: [
-      //account 1
+      //account 1: buyer keypair
       createAccountInfo(buyerKeypair.publicKey, true, true),
-      // account 2
-      createAccountInfo(tokenSaleProgramAccountData.sellerPubkey, false, true),
-      // account 3
-      createAccountInfo(
-        tokenSaleProgramAccountData.idoTokenAccountPubkey,
-        false,
-        true
-      ),
-      // account 4
+
+      // account 2 : seller public key
+      createAccountInfo(sellerPubkey, false, true),
+
+      // account 3 : The account is the token address on smartcontract
+      createAccountInfo(idoTokenAccountPubkey, false, true),
+
+      // account 4 : The account contains the token sale config
       createAccountInfo(tokenSaleProgramAccountPubkey, false, false),
-      // account 5
+
+      // account 5 : system progran id
       createAccountInfo(SystemProgram.programId, false, false),
-      // account 6
+
+      // account 6 :  The account is received token from smartcontract
       createAccountInfo(buyerAta, false, true),
-      // account 7
+
+      // account 7 : token program id
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
-      // account 8
+
+      // account 8 : address contain token on contract
       createAccountInfo(PDA[0], false, false),
-      // account 9
+
+      // //account 9: The account is the prize pool address
+      // createAccountInfo(prizePool, false, true),
+
+      // account 10 :  The account contains the info token sale config.
       createAccountInfo(idoConfigAccountPubkey, false, true),
     ],
     data: buffer,
   });
 
   tx.add(buyTokenIx);
+
   await connection.sendTransaction(tx, [buyerKeypair], {
     skipPreflight: false,
     preflightCommitment: "confirmed",

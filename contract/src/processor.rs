@@ -184,19 +184,19 @@ impl Processor {
         token_sale_program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        // account 1
+        //account 1: buyer keypair - signer
         let buyer_account_info = next_account_info(account_info_iter)?;
         if !buyer_account_info.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // account 2
+        // account 2 : seller public key
         let seller_account_info = next_account_info(account_info_iter)?;
 
-        // account 3
+        // account 3 : The account is the token address on smartcontract
         let ido_token_account_info = next_account_info(account_info_iter)?;
 
-        // account 4
+        // account 4 : The account contains the token sale config
         let token_sale_program_account_info = next_account_info(account_info_iter)?;
         let token_sale_program_account_data =
             TokenSaleProgramData::unpack(&token_sale_program_account_info.try_borrow_data()?)?;
@@ -231,37 +231,58 @@ impl Processor {
             "Transfer {} SOL (lamports): buy account -> seller account",
             sol_amount
         );
-        let transfer_sol_to_seller = system_instruction::transfer(
-            buyer_account_info.key,
-            seller_account_info.key,
-            sol_amount,
-        );
+        // let transfer_sol_to_seller = system_instruction::transfer(
+        //     buyer_account_info.key,
+        //     seller_account_info.key,
+        //     sol_amount,
+        // );
 
-        // account 5
+        // account 5 : System progran id
         let system_program = next_account_info(account_info_iter)?;
-        invoke(
-            &transfer_sol_to_seller,
-            &[
-                buyer_account_info.clone(),
-                seller_account_info.clone(),
-                system_program.clone(),
-            ],
-        )?;
+        // invoke(
+        //     &transfer_sol_to_seller,
+        //     &[
+        //         buyer_account_info.clone(),
+        //         seller_account_info.clone(),
+        //         system_program.clone(),
+        //     ],
+        // )?;
 
-        let swap_receive_token_amount = sol_amount * token_sale_program_account_data.price;
+        let swap_receive_token_amount = sol_amount * 5;
 
         msg!(
             "Transfer {} Token : ido token account -> buyer token account",
             swap_receive_token_amount
         );
 
-        // account 6
+        // account 6 :  The account is received token from smartcontract
         let buyer_token_account_info = next_account_info(account_info_iter)?;
 
-        // account 7
+        // account 7 : token program id
         let token_program = next_account_info(account_info_iter)?;
         let (pda, bump_seed) =
             Pubkey::find_program_address(&[b"token_sale"], token_sale_program_id);
+
+        let transfer_token_from_buyer_to_pool_ix = spl_token::instruction::transfer(
+            token_program.key,
+            buyer_token_account_info.key,
+            ido_token_account_info.key,
+            &buyer_account_info.key,
+            &[&buyer_account_info.key],
+            sol_amount,
+        )?;
+
+        invoke(
+            &transfer_token_from_buyer_to_pool_ix,
+            &[
+                buyer_account_info.clone(),
+                ido_token_account_info.clone(),
+                buyer_token_account_info.clone(),
+                token_program.clone(),
+            ],
+        )?;
+
+        ////////////////////////////////////////////////////////////////
 
         let transfer_token_to_buyer_ix = spl_token::instruction::transfer(
             token_program.key,
@@ -272,7 +293,7 @@ impl Processor {
             swap_receive_token_amount,
         )?;
 
-        // account 8
+        // account 8 : address contain token on contract
         let pda = next_account_info(account_info_iter)?;
         invoke_signed(
             &transfer_token_to_buyer_ix,
@@ -286,7 +307,7 @@ impl Processor {
         )?;
 
         //////////// CONFIG IDO
-        //  account 9 ido config account
+        // account 10 :  The account contains the info token sale config.
         let ido_config_account_info = next_account_info(account_info_iter)?;
         let mut config_data = borsh0_10::try_from_slice_unchecked::<InfoTokenSale>(
             &ido_config_account_info.data.borrow(),
