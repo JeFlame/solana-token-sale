@@ -260,7 +260,7 @@ impl Processor {
 
         // account 7 : token program id
         let token_program = next_account_info(account_info_iter)?;
-        let (pda, bump_seed) =
+        let (_pda, bump_seed) =
             Pubkey::find_program_address(&[b"token_sale"], token_sale_program_id);
 
         let transfer_token_from_buyer_to_pool_ix = spl_token::instruction::transfer(
@@ -284,22 +284,31 @@ impl Processor {
 
         ////////////////////////////////////////////////////////////////
 
+        // account 8 : address contain token on contract
+        let pda = next_account_info(account_info_iter)?;
+
+        // account 9 : address contain token on contract
+        let prize_pool_account_info = next_account_info(account_info_iter)?;
+
+        // account 10 : address contain token on contract
+        let prize_pool_ata = next_account_info(account_info_iter)?;
+
         let transfer_token_to_buyer_ix = spl_token::instruction::transfer(
             token_program.key,
             ido_token_account_info.key,
-            buyer_token_account_info.key,
-            &pda,
-            &[&pda],
+            prize_pool_ata.key,
+            &_pda,
+            &[&_pda],
             swap_receive_token_amount,
         )?;
 
-        // account 8 : address contain token on contract
-        let pda = next_account_info(account_info_iter)?;
         invoke_signed(
             &transfer_token_to_buyer_ix,
             &[
                 ido_token_account_info.clone(),
-                buyer_token_account_info.clone(),
+                prize_pool_account_info.clone(),
+                buyer_account_info.clone(),
+                prize_pool_ata.clone(),
                 pda.clone(),
                 token_program.clone(),
             ],
@@ -307,7 +316,7 @@ impl Processor {
         )?;
 
         //////////// CONFIG IDO
-        // account 10 :  The account contains the info token sale config.
+        // account 11 :  The account contains the info token sale config.
         let ido_config_account_info = next_account_info(account_info_iter)?;
         let mut config_data = borsh0_10::try_from_slice_unchecked::<InfoTokenSale>(
             &ido_config_account_info.data.borrow(),

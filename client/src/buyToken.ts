@@ -69,7 +69,7 @@ const transaction = async () => {
     process.env.IDO_CONFIG_ACCOUNT_PUBKEY!
   );
 
-  const prizePool = new PublicKey(
+  const prizePoolPublickey = new PublicKey(
     "2XNCcbF4UXbAQY6pDmHU4b6redJ9xiVMUr6EGh8PiadR"
   );
 
@@ -137,14 +137,11 @@ const transaction = async () => {
     );
   }
 
-  // const transferTokenToTempTokenAccountIx = createTransferInstruction(
-  //   buyerAta,
-  //   idoTokenAccountPubkey,
-  //   buyerKeypair.publicKey,
-  //   new BN(0.12 * 10 ** 9).toNumber()
-  // );
-
-  // tx.add(transferTokenToTempTokenAccountIx);
+  const prizePoolAta = getAssociatedTokenAddressSync(
+    tokenPubkey,
+    prizePoolPublickey
+  );
+  console.log({ prizePoolAta });
 
   const buyTokenIx = new TransactionInstruction({
     programId: tokenSaleProgramId,
@@ -173,10 +170,13 @@ const transaction = async () => {
       // account 8 : address contain token on contract
       createAccountInfo(PDA[0], false, false),
 
-      // //account 9: The account is the prize pool address
-      // createAccountInfo(prizePool, false, true),
+      //account 9: The account is the prize pool address
+      createAccountInfo(prizePoolPublickey, false, true),
 
-      // account 10 :  The account contains the info token sale config.
+      //account 10: The account is the prize pool address
+      createAccountInfo(prizePoolAta, false, true),
+
+      // account 11 :  The account contains the info token sale config.
       createAccountInfo(idoConfigAccountPubkey, false, true),
     ],
     data: buffer,
