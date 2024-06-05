@@ -22,6 +22,7 @@ import {
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddressSync,
   getMinimumBalanceForRentExemptMint,
+  getOrCreateAssociatedTokenAccount,
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -117,15 +118,23 @@ const transaction = async () => {
   console.log('ataAccount', ataAccount);
 
   if (!ataAccount) {
-    const ataInstruction = createAssociatedTokenAccountInstruction(
-      stakerKeypair.publicKey,
-      stakerAta,
-      stakerKeypair.publicKey,
+    await getOrCreateAssociatedTokenAccount(
+      connection,
+      stakerKeypair,
       tokenPubkey,
-      tokenSaleProgramId
+      stakerKeypair.publicKey
     );
-    tx.add(ataInstruction);
   }
+
+  const prizePoolPublickey = new PublicKey(
+    "H82m8AD5ggVMW4Z8NrTgtNX1uvuR6zCJ2pEW9yCGkp9b"
+  );
+  const prizePoolAta = getAssociatedTokenAddressSync(
+    tokenPubkey,
+    prizePoolPublickey
+  );
+
+  console.log(prizePoolAta);
 
   console.log(55555555555555);
 
@@ -135,22 +144,22 @@ const transaction = async () => {
       //account 1
       createAccountInfo(stakerKeypair.publicKey, true, true),
       // account 2
-      createAccountInfo(tokenSaleProgramAccountData.poolPubkey, false, true),
-      // account 3
       createAccountInfo(
         tokenSaleProgramAccountData.idoTokenAccountPubkey,
         false,
         true
       ),
-      // account 4
+      // account 2
       createAccountInfo(tokenSaleProgramAccountPubkey, false, false),
-      // account 5
+      // account 4
       createAccountInfo(stakerAta, false, true),
-      // account 6
+      // account 5
       createAccountInfo(TOKEN_PROGRAM_ID, false, false),
+      //account 6
+      createAccountInfo(prizePoolAta, false, true),
       // account 7
       createAccountInfo(PDA[0], false, false),
-      // // account 8
+      // account 8
       // createAccountInfo(idoConfigAccountPubkey, false, true),
     ],
     data: buffer,
