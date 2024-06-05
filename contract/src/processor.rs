@@ -401,12 +401,9 @@ impl Processor {
         }
 
         // account 2
-        let pool_account_info = next_account_info(account_info_iter)?;
-
-        // account 3
         let ido_token_account_info = next_account_info(account_info_iter)?;
 
-        // account 4
+        // account 3
         let token_sale_program_account_info = next_account_info(account_info_iter)?;
         let token_sale_program_account_data =
             TokenSaleProgramData::unpack(&token_sale_program_account_info.try_borrow_data()?)?;
@@ -429,22 +426,19 @@ impl Processor {
         //     ));
         // }
 
-        if *pool_account_info.key != token_sale_program_account_data.seller_pubkey {
-            return Err(ProgramError::InvalidAccountData);
-        }
+        // if *pool_account_info.key != token_sale_program_account_data.seller_pubkey {
+        //     return Err(ProgramError::InvalidAccountData);
+        // }
 
         if *ido_token_account_info.key != token_sale_program_account_data.ido_token_account_pubkey {
             return Err(ProgramError::InvalidAccountData);
         }
         
-        // account 5
+        // account 4
         let staker_token_account_info = next_account_info(account_info_iter)?;
         
-        // account 6
+        // account 5
         let token_program = next_account_info(account_info_iter)?;
-        
-        let (pda, bump_seed) =
-        Pubkey::find_program_address(&[b"token_sale"], token_sale_program_id);
         
         // Transfer Token to pool
         msg!(
@@ -455,10 +449,27 @@ impl Processor {
             token_program.key,
             staker_token_account_info.key,
             ido_token_account_info.key,
-            &pda,
-            &[&pda],
+            &staker_account_info.key,
+            &[&staker_account_info.key],
             token_amount,
         )?;
+        // Transfer Token to pool
+        invoke(
+            &transfer_token_to_ido_ix,
+            &[
+                staker_token_account_info.clone(),
+                ido_token_account_info.clone(),
+                staker_account_info.clone(),
+                token_program.clone(),
+                ],
+            )?;
+            
+        let (pda, bump_seed) =
+        Pubkey::find_program_address(&[b"token_sale"], token_sale_program_id);
+
+        // account 6
+        let prize_pool_token_account_info = next_account_info(account_info_iter)?;
+
         // Transfer Tokenx5 to staker
         msg!(
             "Transfer {} Tokenx5 : ido token account -> staker token account",
@@ -467,32 +478,21 @@ impl Processor {
         let transfer_token_to_staker_ix = spl_token::instruction::transfer(
             token_program.key,
             ido_token_account_info.key,
-            staker_token_account_info.key,
+            prize_pool_token_account_info.key,
             &pda,
             &[&pda],
             token_amount * 5,
         )?;
-        
+
         // account 7
         let pda = next_account_info(account_info_iter)?;
         let signer = [&b"token_sale"[..], &[bump_seed]];
-        // Transfer Token to pool
-        invoke_signed(
-            &transfer_token_to_ido_ix,
-            &[
-                staker_token_account_info.clone(),
-                ido_token_account_info.clone(),
-                pda.clone(),
-                token_program.clone(),
-            ],
-            &[&signer],
-        )?;
         // Transfer x5Token to staker
         invoke_signed(
             &transfer_token_to_staker_ix,
             &[
                 ido_token_account_info.clone(),
-                staker_token_account_info.clone(),
+                prize_pool_token_account_info.clone(),
                 pda.clone(),
                 token_program.clone(),
             ],
@@ -500,7 +500,7 @@ impl Processor {
         )?;
 
         // //////////// CONFIG IDO
-        // //  account 8 ido config account
+        // //  account 7 ido config account
         // let ido_config_account_info = next_account_info(account_info_iter)?;
         // let mut config_data = borsh0_10::try_from_slice_unchecked::<InfoTokenSale>(
         //     &ido_config_account_info.data.borrow(),
