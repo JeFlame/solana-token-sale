@@ -4,6 +4,7 @@ import * as fs from "fs";
 import base58 from "bs58";
 import dotenv from "dotenv";
 import { BN } from "bn.js";
+import { PublicKey } from "@metaplex-foundation/js";
 dotenv.config();
 
 let PDAPublicKey: web3.PublicKey;
@@ -11,7 +12,7 @@ let PDAPublicKey: web3.PublicKey;
 function initializeSignerKeypair(): web3.Keypair {
   // Onwer keypair
   const ownerKeypair = web3.Keypair.fromSecretKey(
-    base58.decode(process.env.PRIVATE_KEY!)
+    base58.decode(process.env.STAKER_PRIVATE_KEY!)
   );
   return ownerKeypair;
 }
@@ -107,12 +108,18 @@ async function main() {
 
   const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
-  const prizeProgramId = new web3.PublicKey(
-    "AaxErDLdEZw9WgtjAHeB8Lkpbn4KxCN9o7nzmePdcugf"
+  const StakeProgramId = new web3.PublicKey(
+    "2VRYn8E35S4xPyysp1z8jqFESL3N1esCwMvbiEhB2GZK"
   );
+  await withdraw(signer, StakeProgramId, connection);
   // await getStake(PDAPublicKey, connection);
-  await withdraw(signer, prizeProgramId, connection);
-  await getStake(PDAPublicKey, connection);
+
+  const stakerPublicKey = new PublicKey("GFD4Gg8JQLJKz9Rf2VRTwsMAQi45eMcf3QCWk2a4v36B");
+  const [PDA] = await web3.PublicKey.findProgramAddress(
+    [stakerPublicKey.toBuffer(), Buffer.from("stake")],
+    StakeProgramId
+  );
+  await getStake(PDA, connection);
 }
 
 main()

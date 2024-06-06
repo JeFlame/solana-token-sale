@@ -16,10 +16,10 @@ dotenv.config();
 
 let PDAPublicKey: web3.PublicKey;
 const TokenPubkey = new web3.PublicKey(
-  "DPZH9bpvpWkBxtYsf3wWJWPDk2frn1KCbEeyKxZTVJ6V"
+  "6Xk4fzMLYba64tbAw2u2KXtQ1xmEqDrmqmrmmyUrH9WC"
 );
 const StakeProgramId = new web3.PublicKey(
-  "AaxErDLdEZw9WgtjAHeB8Lkpbn4KxCN9o7nzmePdcugf"
+  "2VRYn8E35S4xPyysp1z8jqFESL3N1esCwMvbiEhB2GZK"
 );
 
 function initializeSignerKeypair(): web3.Keypair {
@@ -142,7 +142,7 @@ async function stake(
   }
 
   const RewardPoolAccount = new web3.PublicKey(
-    "Hz8fB5cs7jFuAZkUDMX1CEx3aZdjagdvAiE88JGtaSaW"
+    "7zejRL2vsKwFe1aMPfo6VhtFFTR4LL3iJmUk28KkkGsd"
   );
 
   const [pda_program] = PublicKey.findProgramAddressSync(
@@ -151,7 +151,7 @@ async function stake(
   );
 
   const prizePoolPublic = new web3.PublicKey(
-    "2XNCcbF4UXbAQY6pDmHU4b6redJ9xiVMUr6EGh8PiadR"
+    "H82m8AD5ggVMW4Z8NrTgtNX1uvuR6zCJ2pEW9yCGkp9b"
   );
   const PrizePoolAta = getAssociatedTokenAddressSync(
     TokenPubkey,
@@ -220,8 +220,16 @@ async function main() {
   const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
   // await initContract(signer, connection);
+
   await stake(signer, StakeProgramId, connection);
-  await getStake(PDAPublicKey, connection);
+  // await getStake(PDAPublicKey, connection);
+
+  const stakerPublicKey = new PublicKey("GFD4Gg8JQLJKz9Rf2VRTwsMAQi45eMcf3QCWk2a4v36B");
+  const [PDA] = await web3.PublicKey.findProgramAddress(
+    [stakerPublicKey.toBuffer(), Buffer.from("stake")],
+    StakeProgramId
+  );
+  await getStake(PDA, connection);
 }
 
 main()
