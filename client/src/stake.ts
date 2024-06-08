@@ -162,8 +162,8 @@ async function main() {
   const PDAPublicKey = await getUserStakePda(signer.publicKey);
 
   // await initContract(signer, connection);
-  // await stake(signer, StakeProgramId, connection);
-  await getStake(PDAPublicKey, connection);
+  await stake(signer, StakeProgramId, connection);
+  // await getStake(PDAPublicKey, connection);
 }
 
 main()

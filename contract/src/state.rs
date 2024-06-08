@@ -12,7 +12,6 @@ pub struct StakeState {
     pub reward_stake_amount: u64,
     pub start_stake_time: u64,
     pub end_stake_time: u64,
-    pub is_claimed: bool,
 }
 
 impl Sealed for StakeState {}

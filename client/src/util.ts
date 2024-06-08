@@ -39,7 +39,7 @@ export function getProgramPda() {
 
 export function getPrizePoolPda() {
   const prizePoolPublic = new web3.PublicKey(
-    "2XNCcbF4UXbAQY6pDmHU4b6redJ9xiVMUr6EGh8PiadR"
+    "H82m8AD5ggVMW4Z8NrTgtNX1uvuR6zCJ2pEW9yCGkp9b"
   );
   const PrizePoolAta = getAssociatedTokenAddressSync(
     TokenPubkey,
@@ -67,7 +67,6 @@ export const stakeLayout = borsh.struct([
   borsh.u64("reward_stake_amount"),
   borsh.u64("start_stake_time"),
   borsh.u64("end_stake_time"),
-  borsh.bool("is_claimed"),
 ]);
 
 export const getStake = async (
@@ -82,7 +81,6 @@ export const getStake = async (
       duration: data["duration"].toString(),
       stake_amount: data["stake_amount"].toString(),
       reward_stake_amount: data["reward_stake_amount"].toString(),
-      is_claimed: data["is_claimed"].toString(),
       start_stake_time: data["start_stake_time"].toString(),
       end_stake_time: data["end_stake_time"].toString(),
     };

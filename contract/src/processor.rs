@@ -162,7 +162,6 @@ pub fn stake(
     } else {
         stake_data.reward_stake_amount = (7 * 20 * stake_amount) / (365 * 100);
     }
-    stake_data.is_claimed = false;
     stake_data.is_initialized = true;
 
     stake_data.serialize(&mut &mut pda_staker_account.data.borrow_mut()[..])?;
@@ -191,11 +190,6 @@ pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
 
     let mut stake_data =
         try_from_slice_unchecked::<StakeState>(&pda_staker_account.data.borrow()).unwrap();
-
-    if stake_data.is_claimed {
-        msg!("Withdraw already claimed !!!");
-        return Err(PrizeError::Claimed.into());
-    }
 
     let (pda, _bump_seed) = Pubkey::find_program_address(
         &[
@@ -251,7 +245,11 @@ pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
         &[&[&b"stake"[..], &[bump_seed]]],
     )?;
 
-    stake_data.is_claimed = true;
+    stake_data.duration = 0;
+    stake_data.stake_amount = 0;
+    stake_data.start_stake_time = 0;
+    stake_data.end_stake_time = 0;
+    stake_data.reward_stake_amount = 0;
 
     msg!("serializing account");
     stake_data.serialize(&mut &mut pda_staker_account.data.borrow_mut()[..])?;
