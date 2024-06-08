@@ -11,6 +11,7 @@ import {
 } from "@solana/spl-token";
 import {
   RewardPoolAccount,
+  StakeProgramId,
   TokenPubkey,
   getProgramPda,
   getStake,
@@ -103,11 +104,7 @@ async function main() {
   const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
   const PDAPublicKey = await getUserStakePda(signer.publicKey);
-  const prizeProgramId = new web3.PublicKey(
-    "AaxErDLdEZw9WgtjAHeB8Lkpbn4KxCN9o7nzmePdcugf"
-  );
-  // await getStake(PDAPublicKey, connection);
-  await withdraw(signer, prizeProgramId, connection);
+  // await withdraw(signer, StakeProgramId, connection);
   await getStake(PDAPublicKey, connection);
 }
 

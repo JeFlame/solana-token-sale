@@ -8,15 +8,15 @@ import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 dotenv.config();
 
 export const StakeProgramId = new web3.PublicKey(
-  "AaxErDLdEZw9WgtjAHeB8Lkpbn4KxCN9o7nzmePdcugf"
+  "CFX4VfS6qPbogjHhSP3D3skQwQrhoiYFAMHajshakFwo"
 );
 
 export const TokenPubkey = new web3.PublicKey(
-  "9cBLFeaq8oNTFnRBPpa8TWC1kWc352UVneQmy4TeuqBD"
+  "3h5Fj6fX4eoRQUTXhKniVzgxMbigN1YjZ3WVLFzfjDtF"
 );
 
 export const RewardPoolAccount = new web3.PublicKey(
-  "CssojHYYWXKXmrPqCCFWxi4x26oHtGdVk7zMnZcMSLAZ"
+  "9orPcJmQnDXaZtJ85N4rGEK77QrU8yNWM6eyQXfbYSn5"
 );
 
 export function initializeSignerKeypair(): web3.Keypair {

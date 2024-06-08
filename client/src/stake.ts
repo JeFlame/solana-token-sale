@@ -74,7 +74,7 @@ async function stake(
     {
       variant: 0,
       duration: new BN(7),
-      stake_amount: new BN(2 * 10 ** 9),
+      stake_amount: new BN(1000 * 10 ** 9),
     },
     buffer
   );
@@ -162,7 +162,7 @@ async function main() {
   const PDAPublicKey = await getUserStakePda(signer.publicKey);
 
   // await initContract(signer, connection);
-  await stake(signer, StakeProgramId, connection);
+  // await stake(signer, StakeProgramId, connection);
   await getStake(PDAPublicKey, connection);
 }
 
