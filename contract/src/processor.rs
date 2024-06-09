@@ -116,7 +116,7 @@ pub fn init_config(
     }
 
     let (pda, bump_seed) = Pubkey::find_program_address(
-        &[initializer.key.as_ref(), "config-prize".as_bytes().as_ref()],
+        &[initializer.key.as_ref(), "set-config-prize".as_bytes().as_ref()],
         program_id,
     );
     if pda != *pda_account.key {
@@ -155,7 +155,7 @@ pub fn init_config(
         ],
         &[&[
             initializer.key.as_ref(),
-            "config-prize".as_bytes().as_ref(),
+            "set-config-prize".as_bytes().as_ref(),
             &[bump_seed],
         ]],
     )?;
@@ -231,7 +231,7 @@ pub fn update_config(
         try_from_slice_unchecked::<ConfigState>(&pda_account.data.borrow()).unwrap();
 
     let (pda, _bump_seed) = Pubkey::find_program_address(
-        &[initializer.key.as_ref(), "config-prize".as_bytes().as_ref()],
+        &[initializer.key.as_ref(), "set-config-prize".as_bytes().as_ref()],
         program_id,
     );
     if pda != *pda_account.key {
@@ -282,23 +282,29 @@ pub fn claim(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
 
     let initializer = next_account_info(account_info_iter)?;
-    let pda_account = next_account_info(account_info_iter)?;
-    let claim_account = next_account_info(account_info_iter)?;
+    let pda_owner_account = next_account_info(account_info_iter)?;
+    let claimer_account_info = next_account_info(account_info_iter)?;
+    let pda_claimer_account = next_account_info(account_info_iter)?;
+    let claimer_token_account_info = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+    let token_program = next_account_info(account_info_iter)?;
+    let pda_program = next_account_info(account_info_iter)?;
+    let prize_pool_token_account_info = next_account_info(account_info_iter)?;
 
-    if !claim_account.is_signer {
+    if !claimer_account_info.is_signer {
         msg!("Missing required signature");
         return Err(ProgramError::MissingRequiredSignature);
     }
 
     msg!("unpacking state account");
     let mut config_data =
-        try_from_slice_unchecked::<ConfigState>(&pda_account.data.borrow()).unwrap();
+        try_from_slice_unchecked::<ConfigState>(&pda_owner_account.data.borrow()).unwrap();
 
-    let (pda, _bump_seed) = Pubkey::find_program_address(
-        &[initializer.key.as_ref(), "config-prize".as_bytes().as_ref()],
+    let (owner_pda, _bump_seed) = Pubkey::find_program_address(
+        &[initializer.key.as_ref(), "set-config-prize".as_bytes().as_ref()],
         program_id,
     );
-    if pda != *pda_account.key {
+    if owner_pda != *pda_owner_account.key {
         msg!("Invalid seeds for PDA");
         return Err(PrizeError::InvalidPDA.into());
     }
@@ -319,13 +325,13 @@ pub fn claim(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         config_data.end_time
     );
 
-    if current_timestamp < config_data.start_time || current_timestamp > config_data.end_time {
-        return Err(ProgramError::BorshIoError(
-            "Invalid time range!".to_string(),
-        ));
-    }
+    // if current_timestamp < config_data.start_time || current_timestamp > config_data.end_time {
+    //     return Err(ProgramError::BorshIoError(
+    //         "Invalid time range!".to_string(),
+    //     ));
+    // }
 
-    let (order, is_claimed, prize_amount) = get_prize(&claim_account.key, &config_data);
+    let (order, is_claimed, prize_amount) = get_prize(&claimer_account_info.key, &config_data);
     if order == 0u8 {
         msg!("Account is not a winner");
         return Err(PrizeError::NotWinner.into());
@@ -347,22 +353,37 @@ pub fn claim(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     if order == 3 {
         config_data.is_third_claimed = true;
     }
-    let pda_account_lamports = pda_account.lamports();
 
-    if pda_account_lamports < prize_amount {
-        return Err(ProgramError::InsufficientFunds);
-    }
-
+    /////
+    let (_pda, bump_seed) = Pubkey::find_program_address(&[b"claim"], program_id);
     msg!(
-        "Transfer {} SOL (lamports) -> account: {}",
-        prize_amount,
-        claim_account.key
+        "Transfer {} token from prize pool to claimer",
+        prize_amount
     );
-    **pda_account.try_borrow_mut_lamports()? -= prize_amount;
-    **claim_account.try_borrow_mut_lamports()? += prize_amount;
+    let transfer_token_to_claimer_ix = spl_token::instruction::transfer(
+        token_program.key,
+        prize_pool_token_account_info.key,
+        claimer_token_account_info.key,
+        &_pda,
+        &[&_pda],
+        prize_amount,
+    )?;
+
+    invoke_signed(
+        &transfer_token_to_claimer_ix,
+        &[
+            claimer_account_info.clone(),
+            prize_pool_token_account_info.clone(),
+            claimer_token_account_info.clone(),
+            pda_program.clone(),
+            token_program.clone(),
+        ],
+        &[&[&b"claim"[..], &[bump_seed]]],
+    )?;
+    /////
 
     msg!("serializing account");
-    config_data.serialize(&mut &mut pda_account.data.borrow_mut()[..])?;
+    config_data.serialize(&mut &mut pda_owner_account.data.borrow_mut()[..])?;
     msg!("state account serialized");
 
     Ok(())

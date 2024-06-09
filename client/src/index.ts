@@ -92,7 +92,7 @@ async function initConfig(
   buffer = buffer.slice(0, configInstructionLayout.getSpan(buffer));
 
   const [pda] = await web3.PublicKey.findProgramAddress(
-    [signer.publicKey.toBuffer(), Buffer.from("config-prize")],
+    [signer.publicKey.toBuffer(), Buffer.from("set-config-prize")],
     programId
   );
 
@@ -146,18 +146,18 @@ async function updateConfig(
   configInstructionLayout.encode(
     {
       variant: 1,
-      total_prize: new BN(6 * decimal),
-      first_prize: new BN(3 * decimal),
-      second_prize: new BN(2 * decimal),
-      third_prize: new BN(1 * decimal),
+      total_prize: new BN(100000 * decimal),
+      first_prize: new BN(60000 * decimal),
+      second_prize: new BN(40000 * decimal),
+      third_prize: new BN(10000 * decimal),
       first_account: new web3.PublicKey(
-        "3fVoiFFDtdBG6ZVGeP6wrBKENFjpjbrCWabpRMGJ3Jne"
+        "GFD4Gg8JQLJKz9Rf2VRTwsMAQi45eMcf3QCWk2a4v36B"
       ),
       second_account: new web3.PublicKey(
-        "CjpbG49czTy2PLYkkHodLq9GhPYCd8iuNv2EPWE1kHKp"
+        "3EcgvnmX2pdhLH9qXUsomeBmSWurxo3hhhy1LNy7W6Nh"
       ),
       third_account: new web3.PublicKey(
-        "HXCYExhtcnqJrvJEfQooPuWibbnxErGkqCRr6x9Coda6"
+        "HJA1bp32Sr2VzyKjAYpNwYvX6VYc2RKJaA2v1jN3VdNF"
       ),
       is_first_claimed: false,
       is_second_claimed: false,
@@ -169,7 +169,7 @@ async function updateConfig(
   );
 
   const [pda] = await web3.PublicKey.findProgramAddress(
-    [signer.publicKey.toBuffer(), Buffer.from("config-prize")],
+    [signer.publicKey.toBuffer(), Buffer.from("set-config-prize")],
     programId
   );
 
@@ -216,13 +216,13 @@ async function main() {
 
   const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
-  const PDA = new web3.PublicKey("aXRun3U7XHyri96YVTAeuPccUcBcEkJPTN1UwdHcFkQ");
+  const PDA = new web3.PublicKey("CuUgRKLDfuLSYtHC2WFczhXTQ8iZSyKN1f17qVLZiszK");
   const prizeProgramId = new web3.PublicKey(
-    "6T79HdAoKWtBRjAngMWcCeVnrwFJhPJ4bWvwFsQzfv8z"
+    "75RVsqS5pcB7onoguqWE63yNK1U1fysRxWXmYW4e1YKd"
   );
   // await initConfig(signer, prizeProgramId, connection);
-  await getConfig(PDA, connection);
-  await updateConfig(signer, prizeProgramId, connection);
+  // await getConfig(PDA, connection);
+  // await updateConfig(signer, prizeProgramId, connection);
   await getConfig(PDA, connection);
 }
 

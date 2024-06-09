@@ -13,11 +13,15 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/bn.js": "^5.1.5",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.4"
   },
   "dependencies": {
+    "@metaplex-foundation/js": "^0.20.1",
+    "@metaplex-foundation/mpl-token-metadata": "^2.8.6",
     "@project-serum/borsh": "^0.2.5",
+    "@solana/spl-token": "^0.4.6",
     "@solana/web3.js": "^1.42.0",
     "bs58": "^5.0.0",
     "dotenv": "^16.0.1"
