@@ -12,9 +12,6 @@ pub enum PrizeError {
     #[error("Account is not a winner")]
     NotWinner,
 
-    #[error("Account claimed")]
-    Claimed,
-
     #[error("Input data exceeds max length")]
     InvalidDataLength,
 

@@ -158,9 +158,9 @@ pub fn stake(
     stake_data.start_stake_time = current_timestamp;
     stake_data.end_stake_time = current_timestamp + duration * 24 * 60 * 60;
     if duration == 1 {
-        stake_data.reward_stake_amount = (15 * stake_amount) / (365 * 100);
+        stake_data.reward_stake_amount = (15 * stake_amount) / 100;
     } else {
-        stake_data.reward_stake_amount = (7 * 20 * stake_amount) / (365 * 100);
+        stake_data.reward_stake_amount = (20 * stake_amount) / 100;
     }
     stake_data.is_initialized = true;
 
@@ -222,7 +222,7 @@ pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
     let (_pda, bump_seed) = Pubkey::find_program_address(&[b"stake"], program_id);
     msg!(
         "Transfer {} token from reward pool to staker",
-        stake_data.reward_stake_amount
+        stake_data.stake_amount + stake_data.reward_stake_amount
     );
     let transfer_token_to_staker_ix = spl_token::instruction::transfer(
         token_program.key,
@@ -230,7 +230,7 @@ pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult 
         staker_token_account_info.key,
         &_pda,
         &[&_pda],
-        stake_data.reward_stake_amount,
+        stake_data.stake_amount + stake_data.reward_stake_amount,
     )?;
 
     invoke_signed(
