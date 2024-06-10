@@ -12,7 +12,18 @@ import {
   getAssociatedTokenAddressSync,
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
-import { TokenPubkey, getProgramPda, getClaimerPda, initializeClaimerKeypair, getPrizePoolAta, initializeOwnerKeypair, configInstructionLayout, getConfig, PrizeProgramId, PrizePoolAccount } from "./util";
+import {
+  TokenPubkey,
+  getProgramPda,
+  getClaimerPda,
+  initializeClaimerKeypair,
+  getPrizePoolAta,
+  initializeOwnerKeypair,
+  configInstructionLayout,
+  getConfig,
+  PrizeProgramId,
+  PrizePoolAccount,
+} from "./util";
 
 async function initContract(owner: web3.Keypair, connection: web3.Connection) {
   const PrizePoolAccountKeypair = new web3.Keypair();
@@ -73,7 +84,7 @@ async function claim(
     0,
     configInstructionLayout.getSpan(claimBuffer)
   );
-  
+
   const claimerPda = await getClaimerPda(claimer.publicKey);
   console.log("PDA Claimer is:", claimerPda.toBase58());
 
@@ -81,9 +92,9 @@ async function claim(
     TokenPubkey,
     claimer.publicKey
   );
-  console.log('claimerAta', claimerAta);
+  console.log("claimerAta", claimerAta);
   const ataClaimerAccount = await connection.getAccountInfo(claimerAta);
-  console.log('ataClaimerAccount', ataClaimerAccount);
+  console.log("ataClaimerAccount", ataClaimerAccount);
   if (!ataClaimerAccount) {
     await getOrCreateAssociatedTokenAccount(
       connection,
@@ -92,7 +103,7 @@ async function claim(
       claimer.publicKey
     );
   }
-  
+
   const ProgramPDA = getProgramPda();
   // console.log({ ProgramPDA });
 
@@ -157,14 +168,14 @@ async function claim(
 }
 
 async function main() {
-  console.log('connection');
+  console.log("connection");
   const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
-  // const owner = initializeOwnerKeypair();
-  // await initContract(owner, connection);
-  
-  const claimer = initializeClaimerKeypair();
-  await claim(claimer, PrizeProgramId, connection);
+  const owner = initializeOwnerKeypair();
+  await initContract(owner, connection);
+
+  // const claimer = initializeClaimerKeypair();
+  // await claim(claimer, PrizeProgramId, connection);
 
   // const PDAPublicKey = await getClaimerPda(claimer.publicKey);
   // await getConfig(PDAPublicKey, connection);

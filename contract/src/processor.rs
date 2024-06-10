@@ -84,6 +84,9 @@ pub fn process_instruction(
         ),
         PrizeInstruction::Claim {} => claim(program_id, accounts),
         PrizeInstruction::Close {} => close(program_id, accounts),
+        PrizeInstruction::ResetToken { reset_amount } => {
+            reset_pool(program_id, accounts, reset_amount)
+        }
     }
 }
 
@@ -116,7 +119,10 @@ pub fn init_config(
     }
 
     let (pda, bump_seed) = Pubkey::find_program_address(
-        &[initializer.key.as_ref(), "set-config-prize".as_bytes().as_ref()],
+        &[
+            initializer.key.as_ref(),
+            "set-config-prize".as_bytes().as_ref(),
+        ],
         program_id,
     );
     if pda != *pda_account.key {
@@ -231,7 +237,10 @@ pub fn update_config(
         try_from_slice_unchecked::<ConfigState>(&pda_account.data.borrow()).unwrap();
 
     let (pda, _bump_seed) = Pubkey::find_program_address(
-        &[initializer.key.as_ref(), "set-config-prize".as_bytes().as_ref()],
+        &[
+            initializer.key.as_ref(),
+            "set-config-prize".as_bytes().as_ref(),
+        ],
         program_id,
     );
     if pda != *pda_account.key {
@@ -301,7 +310,10 @@ pub fn claim(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         try_from_slice_unchecked::<ConfigState>(&pda_owner_account.data.borrow()).unwrap();
 
     let (owner_pda, _bump_seed) = Pubkey::find_program_address(
-        &[initializer.key.as_ref(), "set-config-prize".as_bytes().as_ref()],
+        &[
+            initializer.key.as_ref(),
+            "set-config-prize".as_bytes().as_ref(),
+        ],
         program_id,
     );
     if owner_pda != *pda_owner_account.key {
@@ -356,10 +368,7 @@ pub fn claim(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
 
     /////
     let (_pda, bump_seed) = Pubkey::find_program_address(&[b"claim"], program_id);
-    msg!(
-        "Transfer {} token from prize pool to claimer",
-        prize_amount
-    );
+    msg!("Transfer {} token from prize pool to claimer", prize_amount);
     let transfer_token_to_claimer_ix = spl_token::instruction::transfer(
         token_program.key,
         prize_pool_token_account_info.key,
@@ -385,6 +394,59 @@ pub fn claim(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     msg!("serializing account");
     config_data.serialize(&mut &mut pda_owner_account.data.borrow_mut()[..])?;
     msg!("state account serialized");
+
+    Ok(())
+}
+
+pub fn reset_pool(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    reset_amount: u64,
+) -> ProgramResult {
+    msg!("Reset pool ... {}", reset_amount);
+
+    let account_info_iter = &mut accounts.iter();
+
+    let initializer = next_account_info(account_info_iter)?;
+    let reset_token_account_info = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+    let token_program = next_account_info(account_info_iter)?;
+    let pda_program = next_account_info(account_info_iter)?;
+    let prize_pool_token_account_info = next_account_info(account_info_iter)?;
+
+    if !initializer.is_signer {
+        msg!("Missing required signature");
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let (_pda, bump_seed) = Pubkey::find_program_address(&[b"claim"], program_id);
+    let transfer_token_to_reset_ix = spl_token::instruction::transfer(
+        token_program.key,
+        prize_pool_token_account_info.key,
+        reset_token_account_info.key,
+        &_pda,
+        &[&_pda],
+        reset_amount,
+    )?;
+
+    msg!(
+        "_pda: {}, pda_program: {}, prize_pool_token_account_info: {}, reset_token_account_info: {}",
+        _pda,
+        pda_program.key,
+        prize_pool_token_account_info.key,reset_token_account_info.key
+    );
+
+    invoke_signed(
+        &transfer_token_to_reset_ix,
+        &[
+            initializer.clone(),
+            prize_pool_token_account_info.clone(),
+            reset_token_account_info.clone(),
+            pda_program.clone(),
+            token_program.clone(),
+        ],
+        &[&[&b"claim"[..], &[bump_seed]]],
+    )?;
 
     Ok(())
 }

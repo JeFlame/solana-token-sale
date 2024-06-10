@@ -33,6 +33,9 @@ pub enum PrizeInstruction {
 
     Claim {},
     Close {},
+    ResetToken {
+        reset_amount: u64,
+    },
 }
 
 #[derive(BorshDeserialize)]
@@ -49,6 +52,11 @@ struct ConfigPayload {
     is_third_claimed: bool,
     start_time: u64,
     end_time: u64,
+}
+
+#[derive(BorshDeserialize)]
+struct ResetTokenPayload {
+    reset_amount: u64,
 }
 
 impl PrizeInstruction {
@@ -100,6 +108,12 @@ impl PrizeInstruction {
             }
             2 => Self::Claim {},
             3 => Self::Close {},
+            4 => {
+                let payload = ResetTokenPayload::try_from_slice(rest).unwrap();
+                Self::ResetToken {
+                    reset_amount: payload.reset_amount,
+                }
+            }
             _ => return Err(ProgramError::InvalidInstructionData),
         })
     }

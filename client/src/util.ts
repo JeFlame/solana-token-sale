@@ -3,21 +3,24 @@ import base58 from "bs58";
 import dotenv from "dotenv";
 import * as borsh from "@project-serum/borsh";
 import { PublicKey } from "@metaplex-foundation/js";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddressSync,
+  getOrCreateAssociatedTokenAccount,
+} from "@solana/spl-token";
 import { BN } from "bn.js";
 import * as fs from "fs";
 dotenv.config();
 
 export const PrizeProgramId = new web3.PublicKey(
-  "75RVsqS5pcB7onoguqWE63yNK1U1fysRxWXmYW4e1YKd"
+  "5Qq8oK3zjfo7VhaQwyVz9BR42365eZP8jhgFxFxcHAaX"
 );
 
 export const TokenPubkey = new web3.PublicKey(
-  "3h5Fj6fX4eoRQUTXhKniVzgxMbigN1YjZ3WVLFzfjDtF"
+  "9cBLFeaq8oNTFnRBPpa8TWC1kWc352UVneQmy4TeuqBD"
 );
 
 export const PrizePoolAccount = new web3.PublicKey(
-  "VxPsv2wjGR7K4iQqeJe2kvsHd7xUvkGRzLXEmvAXNgt"
+  "eePvPApaUUGBsNwmMDmEKRBHJj2jtXH7wPYaNGHtpih"
 );
 
 export function initializeOwnerKeypair(): web3.Keypair {
@@ -47,7 +50,7 @@ export function getProgramPda() {
 
 export function getPrizePoolAta() {
   const prizePoolPublic = new web3.PublicKey(
-    "VxPsv2wjGR7K4iQqeJe2kvsHd7xUvkGRzLXEmvAXNgt"
+    "5Qq8oK3zjfo7VhaQwyVz9BR42365eZP8jhgFxFxcHAaX"
   );
   const PrizePoolAta = getAssociatedTokenAddressSync(
     TokenPubkey,
@@ -82,6 +85,11 @@ export const configInstructionLayout = borsh.struct([
   borsh.bool("is_third_claimed"),
   borsh.u64("start_time"),
   borsh.u64("end_time"),
+]);
+
+export const resetTokenInstructionLayout = borsh.struct([
+  borsh.u8("variant"),
+  borsh.u64("reset_amount"),
 ]);
 
 export const getConfig = async (

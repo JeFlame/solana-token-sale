@@ -216,14 +216,16 @@ async function main() {
 
   const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
-  const PDA = new web3.PublicKey("CuUgRKLDfuLSYtHC2WFczhXTQ8iZSyKN1f17qVLZiszK");
+  const PDA = new web3.PublicKey(
+    "CuUgRKLDfuLSYtHC2WFczhXTQ8iZSyKN1f17qVLZiszK"
+  );
   const prizeProgramId = new web3.PublicKey(
     "75RVsqS5pcB7onoguqWE63yNK1U1fysRxWXmYW4e1YKd"
   );
-  // await initConfig(signer, prizeProgramId, connection);
+  await initConfig(signer, prizeProgramId, connection);
   // await getConfig(PDA, connection);
   // await updateConfig(signer, prizeProgramId, connection);
-  await getConfig(PDA, connection);
+  // await getConfig(PDA, connection);
 }
 
 main()
